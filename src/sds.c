@@ -73,12 +73,12 @@ static inline char sdsReqType(size_t string_size) {
  * The string is always null-termined (all the sds strings are, always) so
  * even if you create an sds string with:
  *
- * mystring = sdsnewlen("abc",3);
+ * mystring = inginxSdsnewlen("abc",3);
  *
  * You can print the string with printf() as there is an implicit \0 at the
  * end of the string. However the string is binary safe and can contain
  * \0 characters in the middle, as the length is stored in the sds header. */
-sds sdsnewlen(const void *init, size_t initlen) {
+sds inginxSdsnewlen(const void *init, size_t initlen) {
     void *sh;
     sds s;
     char type = sdsReqType(initlen);
@@ -136,23 +136,23 @@ sds sdsnewlen(const void *init, size_t initlen) {
 
 /* Create an empty (zero length) sds string. Even in this case the string
  * always has an implicit null term. */
-sds sdsempty(void) {
-    return sdsnewlen("",0);
+sds inginxSdsempty(void) {
+    return inginxSdsnewlen("",0);
 }
 
 /* Create a new sds string starting from a null terminated C string. */
-sds sdsnew(const char *init) {
+sds inginxSdsnew(const char *init) {
     size_t initlen = (init == NULL) ? 0 : strlen(init);
-    return sdsnewlen(init, initlen);
+    return inginxSdsnewlen(init, initlen);
 }
 
 /* Duplicate an sds string. */
-sds sdsdup(const sds s) {
-    return sdsnewlen(s, sdslen(s));
+sds inginxSdsdup(const sds s) {
+    return inginxSdsnewlen(s, sdslen(s));
 }
 
 /* Free an sds string. No operation is performed if 's' is NULL. */
-void sdsfree(sds s) {
+void inginxSdsfree(sds s) {
     if (s == NULL) return;
     s_free((char*)s-sdsHdrSize(s[-1]));
 }
@@ -163,25 +163,25 @@ void sdsfree(sds s) {
  * This function is useful when the sds string is hacked manually in some
  * way, like in the following example:
  *
- * s = sdsnew("foobar");
+ * s = inginxSdsnew("foobar");
  * s[2] = '\0';
- * sdsupdatelen(s);
+ * inginxSdsupdatelen(s);
  * printf("%d\n", sdslen(s));
  *
- * The output will be "2", but if we comment out the call to sdsupdatelen()
+ * The output will be "2", but if we comment out the call to inginxSdsupdatelen()
  * the output will be "6" as the string was modified but the logical length
  * remains 6 bytes. */
-void sdsupdatelen(sds s) {
+void inginxSdsupdatelen(sds s) {
     int reallen = strlen(s);
-    sdssetlen(s, reallen);
+    inginxSdssetlen(s, reallen);
 }
 
 /* Modify an sds string in-place to make it empty (zero length).
  * However all the existing buffer is not discarded but set as free space
  * so that next append operations will not require allocations up to the
  * number of bytes previously available. */
-void sdsclear(sds s) {
-    sdssetlen(s, 0);
+void inginxSdsclear(sds s) {
+    inginxSdssetlen(s, 0);
     s[0] = '\0';
 }
 
@@ -191,9 +191,9 @@ void sdsclear(sds s) {
  *
  * Note: this does not change the *length* of the sds string as returned
  * by sdslen(), but only the free buffer space we have. */
-sds sdsMakeRoomFor(sds s, size_t addlen) {
+sds inginxSdsMakeRoomFor(sds s, size_t addlen) {
     void *sh, *newsh;
-    size_t avail = sdsavail(s);
+    size_t avail = inginxSdsavail(s);
     size_t len, newlen;
     char type, oldtype = s[-1] & SDS_TYPE_MASK;
     int hdrlen;
@@ -212,7 +212,7 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
     type = sdsReqType(newlen);
 
     /* Don't use type 5: the user is appending to the string and type 5 is
-     * not able to remember empty space, so sdsMakeRoomFor() must be called
+     * not able to remember empty space, so inginxSdsMakeRoomFor() must be called
      * at every appending operation. */
     if (type == SDS_TYPE_5) type = SDS_TYPE_8;
 
@@ -230,9 +230,9 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
         s_free(sh);
         s = (char*)newsh+hdrlen;
         s[-1] = type;
-        sdssetlen(s, len);
+        inginxSdssetlen(s, len);
     }
-    sdssetalloc(s, newlen);
+    inginxSdssetalloc(s, newlen);
     return s;
 }
 
@@ -242,7 +242,7 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
  *
  * After the call, the passed sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
-sds sdsRemoveFreeSpace(sds s) {
+sds inginxSdsRemoveFreeSpace(sds s) {
     void *sh, *newsh;
     char type, oldtype = s[-1] & SDS_TYPE_MASK;
     int hdrlen;
@@ -262,9 +262,9 @@ sds sdsRemoveFreeSpace(sds s) {
         s_free(sh);
         s = (char*)newsh+hdrlen;
         s[-1] = type;
-        sdssetlen(s, len);
+        inginxSdssetlen(s, len);
     }
-    sdssetalloc(s, len);
+    inginxSdssetalloc(s, len);
     return s;
 }
 
@@ -275,14 +275,14 @@ sds sdsRemoveFreeSpace(sds s) {
  * 3) The free buffer at the end if any.
  * 4) The implicit null term.
  */
-size_t sdsAllocSize(sds s) {
-    size_t alloc = sdsalloc(s);
+size_t inginxSdsAllocSize(sds s) {
+    size_t alloc = inginxSdsalloc(s);
     return sdsHdrSize(s[-1])+alloc+1;
 }
 
 /* Return the pointer of the actual SDS allocation (normally SDS strings
  * are referenced by the start of the string buffer). */
-void *sdsAllocPtr(sds s) {
+void *inginxSdsAllocPtr(sds s) {
     return (void*) (s-sdsHdrSize(s[-1]));
 }
 
@@ -291,7 +291,7 @@ void *sdsAllocPtr(sds s) {
  * in the new end of the string.
  *
  * This function is used in order to fix the string length after the
- * user calls sdsMakeRoomFor(), writes something after the end of
+ * user calls inginxSdsMakeRoomFor(), writes something after the end of
  * the current string, and finally needs to set the new length.
  *
  * Note: it is possible to use a negative increment in order to
@@ -299,17 +299,17 @@ void *sdsAllocPtr(sds s) {
  *
  * Usage example:
  *
- * Using sdsIncrLen() and sdsMakeRoomFor() it is possible to mount the
+ * Using inginxSdsIncrLen() and inginxSdsMakeRoomFor() it is possible to mount the
  * following schema, to cat bytes coming from the kernel to the end of an
  * sds string without copying into an intermediate buffer:
  *
  * oldlen = sdslen(s);
- * s = sdsMakeRoomFor(s, BUFFER_SIZE);
+ * s = inginxSdsMakeRoomFor(s, BUFFER_SIZE);
  * nread = read(fd, s+oldlen, BUFFER_SIZE);
  * ... check for nread <= 0 and handle it ...
- * sdsIncrLen(s, nread);
+ * inginxSdsIncrLen(s, nread);
  */
-void sdsIncrLen(sds s, int incr) {
+void inginxSdsIncrLen(sds s, int incr) {
     unsigned char flags = s[-1];
     size_t len;
     switch(flags&SDS_TYPE_MASK) {
@@ -355,16 +355,16 @@ void sdsIncrLen(sds s, int incr) {
  *
  * if the specified length is smaller than the current length, no operation
  * is performed. */
-sds sdsgrowzero(sds s, size_t len) {
+sds inginxSdsgrowzero(sds s, size_t len) {
     size_t curlen = sdslen(s);
 
     if (len <= curlen) return s;
-    s = sdsMakeRoomFor(s,len-curlen);
+    s = inginxSdsMakeRoomFor(s,len-curlen);
     if (s == NULL) return NULL;
 
     /* Make sure added region doesn't contain garbage */
     memset(s+curlen,0,(len-curlen+1)); /* also set trailing \0 byte */
-    sdssetlen(s, len);
+    inginxSdssetlen(s, len);
     return s;
 }
 
@@ -373,13 +373,13 @@ sds sdsgrowzero(sds s, size_t len) {
  *
  * After the call, the passed sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
-sds sdscatlen(sds s, const void *t, size_t len) {
+sds inginxSdscatlen(sds s, const void *t, size_t len) {
     size_t curlen = sdslen(s);
 
-    s = sdsMakeRoomFor(s,len);
+    s = inginxSdsMakeRoomFor(s,len);
     if (s == NULL) return NULL;
     memcpy(s+curlen, t, len);
-    sdssetlen(s, curlen+len);
+    inginxSdssetlen(s, curlen+len);
     s[curlen+len] = '\0';
     return s;
 }
@@ -388,38 +388,38 @@ sds sdscatlen(sds s, const void *t, size_t len) {
  *
  * After the call, the passed sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
-sds sdscat(sds s, const char *t) {
-    return sdscatlen(s, t, strlen(t));
+sds inginxSdscat(sds s, const char *t) {
+    return inginxSdscatlen(s, t, strlen(t));
 }
 
 /* Append the specified sds 't' to the existing sds 's'.
  *
  * After the call, the modified sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
-sds sdscatsds(sds s, const sds t) {
-    return sdscatlen(s, t, sdslen(t));
+sds inginxSdscatsds(sds s, const sds t) {
+    return inginxSdscatlen(s, t, sdslen(t));
 }
 
 /* Destructively modify the sds string 's' to hold the specified binary
  * safe string pointed by 't' of length 'len' bytes. */
-sds sdscpylen(sds s, const char *t, size_t len) {
-    if (sdsalloc(s) < len) {
-        s = sdsMakeRoomFor(s,len-sdslen(s));
+sds inginxSdscpylen(sds s, const char *t, size_t len) {
+    if (inginxSdsalloc(s) < len) {
+        s = inginxSdsMakeRoomFor(s,len-sdslen(s));
         if (s == NULL) return NULL;
     }
     memcpy(s, t, len);
     s[len] = '\0';
-    sdssetlen(s, len);
+    inginxSdssetlen(s, len);
     return s;
 }
 
-/* Like sdscpylen() but 't' must be a null-termined string so that the length
+/* Like inginxSdscpylen() but 't' must be a null-termined string so that the length
  * of the string is obtained with strlen(). */
-sds sdscpy(sds s, const char *t) {
-    return sdscpylen(s, t, strlen(t));
+sds inginxSdscpy(sds s, const char *t) {
+    return inginxSdscpylen(s, t, strlen(t));
 }
 
-/* Helper for sdscatlonglong() doing the actual number -> string
+/* Helper for inginxSdscatlonglong() doing the actual number -> string
  * conversion. 's' must point to a string with room for at least
  * SDS_LLSTR_SIZE bytes.
  *
@@ -488,17 +488,17 @@ static int sdsull2str(char *s, unsigned long long v) {
 
 /* Create an sds string from a long long value. It is much faster than:
  *
- * sdscatprintf(sdsempty(),"%lld\n", value);
+ * inginxSdscatprintf(inginxSdsempty(),"%lld\n", value);
  */
-sds sdsfromlonglong(long long value) {
+sds inginxSdsfromlonglong(long long value) {
     char buf[SDS_LLSTR_SIZE];
     int len = sdsll2str(buf,value);
 
-    return sdsnewlen(buf,len);
+    return inginxSdsnewlen(buf,len);
 }
 
-/* Like sdscatprintf() but gets va_list instead of being variadic. */
-sds sdscatvprintf(sds s, const char *fmt, va_list ap) {
+/* Like inginxSdscatprintf() but gets va_list instead of being variadic. */
+sds inginxSdscatvprintf(sds s, const char *fmt, va_list ap) {
     va_list cpy;
     char staticbuf[1024], *buf = staticbuf, *t;
     size_t buflen = strlen(fmt)*2;
@@ -530,7 +530,7 @@ sds sdscatvprintf(sds s, const char *fmt, va_list ap) {
     }
 
     /* Finally concat the obtained string to the SDS string and return it. */
-    t = sdscat(s, buf);
+    t = inginxSdscat(s, buf);
     if (buf != staticbuf) s_free(buf);
     return t;
 }
@@ -543,24 +543,24 @@ sds sdscatvprintf(sds s, const char *fmt, va_list ap) {
  *
  * Example:
  *
- * s = sdsnew("Sum is: ");
- * s = sdscatprintf(s,"%d+%d = %d",a,b,a+b).
+ * s = inginxSdsnew("Sum is: ");
+ * s = inginxSdscatprintf(s,"%d+%d = %d",a,b,a+b).
  *
  * Often you need to create a string from scratch with the printf-alike
- * format. When this is the need, just use sdsempty() as the target string:
+ * format. When this is the need, just use inginxSdsempty() as the target string:
  *
- * s = sdscatprintf(sdsempty(), "... your format ...", args);
+ * s = inginxSdscatprintf(inginxSdsempty(), "... your format ...", args);
  */
-sds sdscatprintf(sds s, const char *fmt, ...) {
+sds inginxSdscatprintf(sds s, const char *fmt, ...) {
     va_list ap;
     char *t;
     va_start(ap, fmt);
-    t = sdscatvprintf(s,fmt,ap);
+    t = inginxSdscatvprintf(s,fmt,ap);
     va_end(ap);
     return t;
 }
 
-/* This function is similar to sdscatprintf, but much faster as it does
+/* This function is similar to inginxSdscatprintf, but much faster as it does
  * not rely on sprintf() family functions implemented by the libc that
  * are often very slow. Moreover directly handling the sds string as
  * new data is concatenated provides a performance improvement.
@@ -576,7 +576,7 @@ sds sdscatprintf(sds s, const char *fmt, ...) {
  * %U - 64 bit unsigned integer (unsigned long long, uint64_t)
  * %% - Verbatim "%" character.
  */
-sds sdscatfmt(sds s, char const *fmt, ...) {
+sds inginxSdscatfmt(sds s, char const *fmt, ...) {
     size_t initlen = sdslen(s);
     const char *f = fmt;
     int i;
@@ -592,8 +592,8 @@ sds sdscatfmt(sds s, char const *fmt, ...) {
         unsigned long long unum;
 
         /* Make sure there is always space for at least 1 char. */
-        if (sdsavail(s)==0) {
-            s = sdsMakeRoomFor(s,1);
+        if (inginxSdsavail(s)==0) {
+            s = inginxSdsMakeRoomFor(s,1);
         }
 
         switch(*f) {
@@ -605,11 +605,11 @@ sds sdscatfmt(sds s, char const *fmt, ...) {
             case 'S':
                 str = va_arg(ap,char*);
                 l = (next == 's') ? strlen(str) : sdslen(str);
-                if (sdsavail(s) < l) {
-                    s = sdsMakeRoomFor(s,l);
+                if (inginxSdsavail(s) < l) {
+                    s = inginxSdsMakeRoomFor(s,l);
                 }
                 memcpy(s+i,str,l);
-                sdsinclen(s,l);
+                inginxSdsinclen(s,l);
                 i += l;
                 break;
             case 'i':
@@ -621,11 +621,11 @@ sds sdscatfmt(sds s, char const *fmt, ...) {
                 {
                     char buf[SDS_LLSTR_SIZE];
                     l = sdsll2str(buf,num);
-                    if (sdsavail(s) < l) {
-                        s = sdsMakeRoomFor(s,l);
+                    if (inginxSdsavail(s) < l) {
+                        s = inginxSdsMakeRoomFor(s,l);
                     }
                     memcpy(s+i,buf,l);
-                    sdsinclen(s,l);
+                    inginxSdsinclen(s,l);
                     i += l;
                 }
                 break;
@@ -638,23 +638,23 @@ sds sdscatfmt(sds s, char const *fmt, ...) {
                 {
                     char buf[SDS_LLSTR_SIZE];
                     l = sdsull2str(buf,unum);
-                    if (sdsavail(s) < l) {
-                        s = sdsMakeRoomFor(s,l);
+                    if (inginxSdsavail(s) < l) {
+                        s = inginxSdsMakeRoomFor(s,l);
                     }
                     memcpy(s+i,buf,l);
-                    sdsinclen(s,l);
+                    inginxSdsinclen(s,l);
                     i += l;
                 }
                 break;
             default: /* Handle %% and generally %<unknown>. */
                 s[i++] = next;
-                sdsinclen(s,1);
+                inginxSdsinclen(s,1);
                 break;
             }
             break;
         default:
             s[i++] = *f;
-            sdsinclen(s,1);
+            inginxSdsinclen(s,1);
             break;
         }
         f++;
@@ -674,13 +674,13 @@ sds sdscatfmt(sds s, char const *fmt, ...) {
  *
  * Example:
  *
- * s = sdsnew("AA...AA.a.aa.aHelloWorld     :::");
- * s = sdstrim(s,"Aa. :");
+ * s = inginxSdsnew("AA...AA.a.aa.aHelloWorld     :::");
+ * s = inginxSdstrim(s,"Aa. :");
  * printf("%s\n", s);
  *
  * Output will be just "Hello World".
  */
-sds sdstrim(sds s, const char *cset) {
+sds inginxSdstrim(sds s, const char *cset) {
     char *start, *end, *sp, *ep;
     size_t len;
 
@@ -691,7 +691,7 @@ sds sdstrim(sds s, const char *cset) {
     len = (sp > ep) ? 0 : ((ep-sp)+1);
     if (s != sp) memmove(s, sp, len);
     s[len] = '\0';
-    sdssetlen(s,len);
+    inginxSdssetlen(s,len);
     return s;
 }
 
@@ -708,10 +708,10 @@ sds sdstrim(sds s, const char *cset) {
  *
  * Example:
  *
- * s = sdsnew("Hello World");
- * sdsrange(s,1,-1); => "ello World"
+ * s = inginxSdsnew("Hello World");
+ * inginxSdsrange(s,1,-1); => "ello World"
  */
-void sdsrange(sds s, int start, int end) {
+void inginxSdsrange(sds s, int start, int end) {
     size_t newlen, len = sdslen(s);
 
     if (len == 0) return;
@@ -736,18 +736,18 @@ void sdsrange(sds s, int start, int end) {
     }
     if (start && newlen) memmove(s, s+start, newlen);
     s[newlen] = 0;
-    sdssetlen(s,newlen);
+    inginxSdssetlen(s,newlen);
 }
 
 /* Apply tolower() to every character of the sds string 's'. */
-void sdstolower(sds s) {
+void inginxSdstolower(sds s) {
     int len = sdslen(s), j;
 
     for (j = 0; j < len; j++) s[j] = tolower(s[j]);
 }
 
 /* Apply toupper() to every character of the sds string 's'. */
-void sdstoupper(sds s) {
+void inginxSdstoupper(sds s) {
     int len = sdslen(s), j;
 
     for (j = 0; j < len; j++) s[j] = toupper(s[j]);
@@ -764,7 +764,7 @@ void sdstoupper(sds s) {
  * If two strings share exactly the same prefix, but one of the two has
  * additional characters, the longer string is considered to be greater than
  * the smaller one. */
-int sdscmp(const sds s1, const sds s2) {
+int inginxSdscmp(const sds s1, const sds s2) {
     size_t l1, l2, minlen;
     int cmp;
 
@@ -785,14 +785,14 @@ int sdscmp(const sds s1, const sds s2) {
  *
  * Note that 'sep' is able to split a string using
  * a multi-character separator. For example
- * sdssplit("foo_-_bar","_-_"); will return two
+ * inginxSdssplit("foo_-_bar","_-_"); will return two
  * elements "foo" and "bar".
  *
  * This version of the function is binary-safe but
- * requires length arguments. sdssplit() is just the
+ * requires length arguments. inginxSdssplit() is just the
  * same function but for zero-terminated strings.
  */
-sds *sdssplitlen(const char *s, int len, const char *sep, int seplen, int *count) {
+sds *inginxSdssplitlen(const char *s, int len, const char *sep, int seplen, int *count) {
     int elements = 0, slots = 5, start = 0, j;
     sds *tokens;
 
@@ -817,7 +817,7 @@ sds *sdssplitlen(const char *s, int len, const char *sep, int seplen, int *count
         }
         /* search the separator */
         if ((seplen == 1 && *(s+j) == sep[0]) || (memcmp(s+j,sep,seplen) == 0)) {
-            tokens[elements] = sdsnewlen(s+start,j-start);
+            tokens[elements] = inginxSdsnewlen(s+start,j-start);
             if (tokens[elements] == NULL) goto cleanup;
             elements++;
             start = j+seplen;
@@ -825,7 +825,7 @@ sds *sdssplitlen(const char *s, int len, const char *sep, int seplen, int *count
         }
     }
     /* Add the final element. We are sure there is room in the tokens array. */
-    tokens[elements] = sdsnewlen(s+start,len-start);
+    tokens[elements] = inginxSdsnewlen(s+start,len-start);
     if (tokens[elements] == NULL) goto cleanup;
     elements++;
     *count = elements;
@@ -834,18 +834,18 @@ sds *sdssplitlen(const char *s, int len, const char *sep, int seplen, int *count
 cleanup:
     {
         int i;
-        for (i = 0; i < elements; i++) sdsfree(tokens[i]);
+        for (i = 0; i < elements; i++) inginxSdsfree(tokens[i]);
         s_free(tokens);
         *count = 0;
         return NULL;
     }
 }
 
-/* Free the result returned by sdssplitlen(), or do nothing if 'tokens' is NULL. */
-void sdsfreesplitres(sds *tokens, int count) {
+/* Free the result returned by inginxSdssplitlen(), or do nothing if 'tokens' is NULL. */
+void inginxSdsfreesplitres(sds *tokens, int count) {
     if (!tokens) return;
     while(count--)
-        sdsfree(tokens[count]);
+        inginxSdsfree(tokens[count]);
     s_free(tokens);
 }
 
@@ -855,39 +855,39 @@ void sdsfreesplitres(sds *tokens, int count) {
  *
  * After the call, the modified sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
-sds sdscatrepr(sds s, const char *p, size_t len) {
-    s = sdscatlen(s,"\"",1);
+sds inginxSdscatrepr(sds s, const char *p, size_t len) {
+    s = inginxSdscatlen(s,"\"",1);
     while(len--) {
         switch(*p) {
         case '\\':
         case '"':
-            s = sdscatprintf(s,"\\%c",*p);
+            s = inginxSdscatprintf(s,"\\%c",*p);
             break;
-        case '\n': s = sdscatlen(s,"\\n",2); break;
-        case '\r': s = sdscatlen(s,"\\r",2); break;
-        case '\t': s = sdscatlen(s,"\\t",2); break;
-        case '\a': s = sdscatlen(s,"\\a",2); break;
-        case '\b': s = sdscatlen(s,"\\b",2); break;
+        case '\n': s = inginxSdscatlen(s,"\\n",2); break;
+        case '\r': s = inginxSdscatlen(s,"\\r",2); break;
+        case '\t': s = inginxSdscatlen(s,"\\t",2); break;
+        case '\a': s = inginxSdscatlen(s,"\\a",2); break;
+        case '\b': s = inginxSdscatlen(s,"\\b",2); break;
         default:
             if (isprint(*p))
-                s = sdscatprintf(s,"%c",*p);
+                s = inginxSdscatprintf(s,"%c",*p);
             else
-                s = sdscatprintf(s,"\\x%02x",(unsigned char)*p);
+                s = inginxSdscatprintf(s,"\\x%02x",(unsigned char)*p);
             break;
         }
         p++;
     }
-    return sdscatlen(s,"\"",1);
+    return inginxSdscatlen(s,"\"",1);
 }
 
-/* Helper function for sdssplitargs() that returns non zero if 'c'
+/* Helper function for inginxSdssplitargs() that returns non zero if 'c'
  * is a valid hex digit. */
 static int is_hex_digit(char c) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
            (c >= 'A' && c <= 'F');
 }
 
-/* Helper function for sdssplitargs() that converts a hex digit into an
+/* Helper function for inginxSdssplitargs() that converts a hex digit into an
  * integer from 0 to 15 */
 static int hex_digit_to_int(char c) {
     switch(c) {
@@ -920,17 +920,17 @@ static int hex_digit_to_int(char c) {
  * of sds is returned.
  *
  * The caller should free the resulting array of sds strings with
- * sdsfreesplitres().
+ * inginxSdsfreesplitres().
  *
- * Note that sdscatrepr() is able to convert back a string into
- * a quoted string in the same format sdssplitargs() is able to parse.
+ * Note that inginxSdscatrepr() is able to convert back a string into
+ * a quoted string in the same format inginxSdssplitargs() is able to parse.
  *
  * The function returns the allocated tokens on success, even when the
  * input string is empty, or NULL if the input contains unbalanced
  * quotes or closed quotes followed by non space characters
  * as in: "foo"bar or "foo'
  */
-sds *sdssplitargs(const char *line, int *argc) {
+sds *inginxSdssplitargs(const char *line, int *argc) {
     const char *p = line;
     char *current = NULL;
     char **vector = NULL;
@@ -945,7 +945,7 @@ sds *sdssplitargs(const char *line, int *argc) {
             int insq=0; /* set to 1 if we are in 'single quotes' */
             int done=0;
 
-            if (current == NULL) current = sdsempty();
+            if (current == NULL) current = inginxSdsempty();
             while(!done) {
                 if (inq) {
                     if (*p == '\\' && *(p+1) == 'x' &&
@@ -956,7 +956,7 @@ sds *sdssplitargs(const char *line, int *argc) {
 
                         byte = (hex_digit_to_int(*(p+2))*16)+
                                 hex_digit_to_int(*(p+3));
-                        current = sdscatlen(current,(char*)&byte,1);
+                        current = inginxSdscatlen(current,(char*)&byte,1);
                         p += 3;
                     } else if (*p == '\\' && *(p+1)) {
                         char c;
@@ -970,7 +970,7 @@ sds *sdssplitargs(const char *line, int *argc) {
                         case 'a': c = '\a'; break;
                         default: c = *p; break;
                         }
-                        current = sdscatlen(current,&c,1);
+                        current = inginxSdscatlen(current,&c,1);
                     } else if (*p == '"') {
                         /* closing quote must be followed by a space or
                          * nothing at all. */
@@ -980,12 +980,12 @@ sds *sdssplitargs(const char *line, int *argc) {
                         /* unterminated quotes */
                         goto err;
                     } else {
-                        current = sdscatlen(current,p,1);
+                        current = inginxSdscatlen(current,p,1);
                     }
                 } else if (insq) {
                     if (*p == '\\' && *(p+1) == '\'') {
                         p++;
-                        current = sdscatlen(current,"'",1);
+                        current = inginxSdscatlen(current,"'",1);
                     } else if (*p == '\'') {
                         /* closing quote must be followed by a space or
                          * nothing at all. */
@@ -995,7 +995,7 @@ sds *sdssplitargs(const char *line, int *argc) {
                         /* unterminated quotes */
                         goto err;
                     } else {
-                        current = sdscatlen(current,p,1);
+                        current = inginxSdscatlen(current,p,1);
                     }
                 } else {
                     switch(*p) {
@@ -1013,7 +1013,7 @@ sds *sdssplitargs(const char *line, int *argc) {
                         insq=1;
                         break;
                     default:
-                        current = sdscatlen(current,p,1);
+                        current = inginxSdscatlen(current,p,1);
                         break;
                     }
                 }
@@ -1033,9 +1033,9 @@ sds *sdssplitargs(const char *line, int *argc) {
 
 err:
     while((*argc)--)
-        sdsfree(vector[*argc]);
+        inginxSdsfree(vector[*argc]);
     s_free(vector);
-    if (current) sdsfree(current);
+    if (current) inginxSdsfree(current);
     *argc = 0;
     return NULL;
 }
@@ -1044,12 +1044,12 @@ err:
  * characters specified in the 'from' string to the corresponding character
  * in the 'to' array.
  *
- * For instance: sdsmapchars(mystring, "ho", "01", 2)
+ * For instance: inginxSdsmapchars(mystring, "ho", "01", 2)
  * will have the effect of turning the string "hello" into "0ell1".
  *
  * The function returns the sds string pointer, that is always the same
  * as the input pointer since no resize is needed. */
-sds sdsmapchars(sds s, const char *from, const char *to, size_t setlen) {
+sds inginxSdsmapchars(sds s, const char *from, const char *to, size_t setlen) {
     size_t j, i, l = sdslen(s);
 
     for (j = 0; j < l; j++) {
@@ -1065,37 +1065,37 @@ sds sdsmapchars(sds s, const char *from, const char *to, size_t setlen) {
 
 /* Join an array of C strings using the specified separator (also a C string).
  * Returns the result as an sds string. */
-sds sdsjoin(char **argv, int argc, char *sep) {
-    sds join = sdsempty();
+sds inginxSdsjoin(char **argv, int argc, char *sep) {
+    sds join = inginxSdsempty();
     int j;
 
     for (j = 0; j < argc; j++) {
-        join = sdscat(join, argv[j]);
-        if (j != argc-1) join = sdscat(join,sep);
+        join = inginxSdscat(join, argv[j]);
+        if (j != argc-1) join = inginxSdscat(join,sep);
     }
     return join;
 }
 
-/* Like sdsjoin, but joins an array of SDS strings. */
-sds sdsjoinsds(sds *argv, int argc, const char *sep, size_t seplen) {
-    sds join = sdsempty();
+/* Like inginxSdsjoin, but joins an array of SDS strings. */
+sds inginxSdsjoinsds(sds *argv, int argc, const char *sep, size_t seplen) {
+    sds join = inginxSdsempty();
     int j;
 
     for (j = 0; j < argc; j++) {
-        join = sdscatsds(join, argv[j]);
-        if (j != argc-1) join = sdscatlen(join,sep,seplen);
+        join = inginxSdscatsds(join, argv[j]);
+        if (j != argc-1) join = inginxSdscatlen(join,sep,seplen);
     }
     return join;
 }
 
 /* Wrappers to the allocators used by SDS. Note that SDS will actually
- * just use the macros defined into sdsalloc.h in order to avoid to pay
+ * just use the macros defined into inginxSdsalloc.h in order to avoid to pay
  * the overhead of function calls. Here we define these wrappers only for
  * the programs SDS is linked to, if they want to touch the SDS internals
  * even if they use a different allocator. */
-void *sds_malloc(size_t size) { return s_malloc(size); }
-void *sds_realloc(void *ptr, size_t size) { return s_realloc(ptr,size); }
-void sds_free(void *ptr) { s_free(ptr); }
+void *inginxSds_malloc(size_t size) { return s_malloc(size); }
+void *inginxSds_realloc(void *ptr, size_t size) { return s_realloc(ptr,size); }
+void inginxSds_free(void *ptr) { s_free(ptr); }
 
 #if defined(SDS_TEST_MAIN)
 #include <stdio.h>
@@ -1105,126 +1105,126 @@ void sds_free(void *ptr) { s_free(ptr); }
 #define UNUSED(x) (void)(x)
 int sdsTest(void) {
     {
-        sds x = sdsnew("foo"), y;
+        sds x = inginxSdsnew("foo"), y;
 
         test_cond("Create a string and obtain the length",
             sdslen(x) == 3 && memcmp(x,"foo\0",4) == 0)
 
-        sdsfree(x);
-        x = sdsnewlen("foo",2);
+        inginxSdsfree(x);
+        x = inginxSdsnewlen("foo",2);
         test_cond("Create a string with specified length",
             sdslen(x) == 2 && memcmp(x,"fo\0",3) == 0)
 
-        x = sdscat(x,"bar");
+        x = inginxSdscat(x,"bar");
         test_cond("Strings concatenation",
             sdslen(x) == 5 && memcmp(x,"fobar\0",6) == 0);
 
-        x = sdscpy(x,"a");
-        test_cond("sdscpy() against an originally longer string",
+        x = inginxSdscpy(x,"a");
+        test_cond("inginxSdscpy() against an originally longer string",
             sdslen(x) == 1 && memcmp(x,"a\0",2) == 0)
 
-        x = sdscpy(x,"xyzxxxxxxxxxxyyyyyyyyyykkkkkkkkkk");
-        test_cond("sdscpy() against an originally shorter string",
+        x = inginxSdscpy(x,"xyzxxxxxxxxxxyyyyyyyyyykkkkkkkkkk");
+        test_cond("inginxSdscpy() against an originally shorter string",
             sdslen(x) == 33 &&
             memcmp(x,"xyzxxxxxxxxxxyyyyyyyyyykkkkkkkkkk\0",33) == 0)
 
-        sdsfree(x);
-        x = sdscatprintf(sdsempty(),"%d",123);
-        test_cond("sdscatprintf() seems working in the base case",
+        inginxSdsfree(x);
+        x = inginxSdscatprintf(inginxSdsempty(),"%d",123);
+        test_cond("inginxSdscatprintf() seems working in the base case",
             sdslen(x) == 3 && memcmp(x,"123\0",4) == 0)
 
-        sdsfree(x);
-        x = sdsnew("--");
-        x = sdscatfmt(x, "Hello %s World %I,%I--", "Hi!", LLONG_MIN,LLONG_MAX);
-        test_cond("sdscatfmt() seems working in the base case",
+        inginxSdsfree(x);
+        x = inginxSdsnew("--");
+        x = inginxSdscatfmt(x, "Hello %s World %I,%I--", "Hi!", LLONG_MIN,LLONG_MAX);
+        test_cond("inginxSdscatfmt() seems working in the base case",
             sdslen(x) == 60 &&
             memcmp(x,"--Hello Hi! World -9223372036854775808,"
                      "9223372036854775807--",60) == 0)
         printf("[%s]\n",x);
 
-        sdsfree(x);
-        x = sdsnew("--");
-        x = sdscatfmt(x, "%u,%U--", UINT_MAX, ULLONG_MAX);
-        test_cond("sdscatfmt() seems working with unsigned numbers",
+        inginxSdsfree(x);
+        x = inginxSdsnew("--");
+        x = inginxSdscatfmt(x, "%u,%U--", UINT_MAX, ULLONG_MAX);
+        test_cond("inginxSdscatfmt() seems working with unsigned numbers",
             sdslen(x) == 35 &&
             memcmp(x,"--4294967295,18446744073709551615--",35) == 0)
 
-        sdsfree(x);
-        x = sdsnew(" x ");
-        sdstrim(x," x");
-        test_cond("sdstrim() works when all chars match",
+        inginxSdsfree(x);
+        x = inginxSdsnew(" x ");
+        inginxSdstrim(x," x");
+        test_cond("inginxSdstrim() works when all chars match",
             sdslen(x) == 0)
 
-        sdsfree(x);
-        x = sdsnew(" x ");
-        sdstrim(x," ");
-        test_cond("sdstrim() works when a single char remains",
+        inginxSdsfree(x);
+        x = inginxSdsnew(" x ");
+        inginxSdstrim(x," ");
+        test_cond("inginxSdstrim() works when a single char remains",
             sdslen(x) == 1 && x[0] == 'x')
 
-        sdsfree(x);
-        x = sdsnew("xxciaoyyy");
-        sdstrim(x,"xy");
-        test_cond("sdstrim() correctly trims characters",
+        inginxSdsfree(x);
+        x = inginxSdsnew("xxciaoyyy");
+        inginxSdstrim(x,"xy");
+        test_cond("inginxSdstrim() correctly trims characters",
             sdslen(x) == 4 && memcmp(x,"ciao\0",5) == 0)
 
-        y = sdsdup(x);
-        sdsrange(y,1,1);
-        test_cond("sdsrange(...,1,1)",
+        y = inginxSdsdup(x);
+        inginxSdsrange(y,1,1);
+        test_cond("inginxSdsrange(...,1,1)",
             sdslen(y) == 1 && memcmp(y,"i\0",2) == 0)
 
-        sdsfree(y);
-        y = sdsdup(x);
-        sdsrange(y,1,-1);
-        test_cond("sdsrange(...,1,-1)",
+        inginxSdsfree(y);
+        y = inginxSdsdup(x);
+        inginxSdsrange(y,1,-1);
+        test_cond("inginxSdsrange(...,1,-1)",
             sdslen(y) == 3 && memcmp(y,"iao\0",4) == 0)
 
-        sdsfree(y);
-        y = sdsdup(x);
-        sdsrange(y,-2,-1);
-        test_cond("sdsrange(...,-2,-1)",
+        inginxSdsfree(y);
+        y = inginxSdsdup(x);
+        inginxSdsrange(y,-2,-1);
+        test_cond("inginxSdsrange(...,-2,-1)",
             sdslen(y) == 2 && memcmp(y,"ao\0",3) == 0)
 
-        sdsfree(y);
-        y = sdsdup(x);
-        sdsrange(y,2,1);
-        test_cond("sdsrange(...,2,1)",
+        inginxSdsfree(y);
+        y = inginxSdsdup(x);
+        inginxSdsrange(y,2,1);
+        test_cond("inginxSdsrange(...,2,1)",
             sdslen(y) == 0 && memcmp(y,"\0",1) == 0)
 
-        sdsfree(y);
-        y = sdsdup(x);
-        sdsrange(y,1,100);
-        test_cond("sdsrange(...,1,100)",
+        inginxSdsfree(y);
+        y = inginxSdsdup(x);
+        inginxSdsrange(y,1,100);
+        test_cond("inginxSdsrange(...,1,100)",
             sdslen(y) == 3 && memcmp(y,"iao\0",4) == 0)
 
-        sdsfree(y);
-        y = sdsdup(x);
-        sdsrange(y,100,100);
-        test_cond("sdsrange(...,100,100)",
+        inginxSdsfree(y);
+        y = inginxSdsdup(x);
+        inginxSdsrange(y,100,100);
+        test_cond("inginxSdsrange(...,100,100)",
             sdslen(y) == 0 && memcmp(y,"\0",1) == 0)
 
-        sdsfree(y);
-        sdsfree(x);
-        x = sdsnew("foo");
-        y = sdsnew("foa");
-        test_cond("sdscmp(foo,foa)", sdscmp(x,y) > 0)
+        inginxSdsfree(y);
+        inginxSdsfree(x);
+        x = inginxSdsnew("foo");
+        y = inginxSdsnew("foa");
+        test_cond("inginxSdscmp(foo,foa)", inginxSdscmp(x,y) > 0)
 
-        sdsfree(y);
-        sdsfree(x);
-        x = sdsnew("bar");
-        y = sdsnew("bar");
-        test_cond("sdscmp(bar,bar)", sdscmp(x,y) == 0)
+        inginxSdsfree(y);
+        inginxSdsfree(x);
+        x = inginxSdsnew("bar");
+        y = inginxSdsnew("bar");
+        test_cond("inginxSdscmp(bar,bar)", inginxSdscmp(x,y) == 0)
 
-        sdsfree(y);
-        sdsfree(x);
-        x = sdsnew("aar");
-        y = sdsnew("bar");
-        test_cond("sdscmp(bar,bar)", sdscmp(x,y) < 0)
+        inginxSdsfree(y);
+        inginxSdsfree(x);
+        x = inginxSdsnew("aar");
+        y = inginxSdsnew("bar");
+        test_cond("inginxSdscmp(bar,bar)", inginxSdscmp(x,y) < 0)
 
-        sdsfree(y);
-        sdsfree(x);
-        x = sdsnewlen("\a\n\0foo\r",7);
-        y = sdscatrepr(sdsempty(),x,sdslen(x));
-        test_cond("sdscatrepr(...data...)",
+        inginxSdsfree(y);
+        inginxSdsfree(x);
+        x = inginxSdsnewlen("\a\n\0foo\r",7);
+        y = inginxSdscatrepr(inginxSdsempty(),x,sdslen(x));
+        test_cond("inginxSdscatrepr(...data...)",
             memcmp(y,"\"\\a\\n\\x00foo\\r\"",15) == 0)
 
         {
@@ -1232,34 +1232,34 @@ int sdsTest(void) {
             char *p;
             int step = 10, j, i;
 
-            sdsfree(x);
-            sdsfree(y);
-            x = sdsnew("0");
-            test_cond("sdsnew() free/len buffers", sdslen(x) == 1 && sdsavail(x) == 0);
+            inginxSdsfree(x);
+            inginxSdsfree(y);
+            x = inginxSdsnew("0");
+            test_cond("inginxSdsnew() free/len buffers", sdslen(x) == 1 && inginxSdsavail(x) == 0);
 
             /* Run the test a few times in order to hit the first two
              * SDS header types. */
             for (i = 0; i < 10; i++) {
                 int oldlen = sdslen(x);
-                x = sdsMakeRoomFor(x,step);
+                x = inginxSdsMakeRoomFor(x,step);
                 int type = x[-1]&SDS_TYPE_MASK;
 
-                test_cond("sdsMakeRoomFor() len", sdslen(x) == oldlen);
+                test_cond("inginxSdsMakeRoomFor() len", sdslen(x) == oldlen);
                 if (type != SDS_TYPE_5) {
-                    test_cond("sdsMakeRoomFor() free", sdsavail(x) >= step);
-                    oldfree = sdsavail(x);
+                    test_cond("inginxSdsMakeRoomFor() free", inginxSdsavail(x) >= step);
+                    oldfree = inginxSdsavail(x);
                 }
                 p = x+oldlen;
                 for (j = 0; j < step; j++) {
                     p[j] = 'A'+j;
                 }
-                sdsIncrLen(x,step);
+                inginxSdsIncrLen(x,step);
             }
-            test_cond("sdsMakeRoomFor() content",
+            test_cond("inginxSdsMakeRoomFor() content",
                 memcmp("0ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJ",x,101) == 0);
-            test_cond("sdsMakeRoomFor() final length",sdslen(x)==101);
+            test_cond("inginxSdsMakeRoomFor() final length",sdslen(x)==101);
 
-            sdsfree(x);
+            inginxSdsfree(x);
         }
     }
     test_report()

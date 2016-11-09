@@ -86,8 +86,57 @@ struct __attribute__ ((__packed__)) sdshdr64 {
 #define SDS_HDR_VAR(T,s) struct sdshdr##T *sh = (struct sdshdr##T *)(void*)((s)-(sizeof(struct sdshdr##T)));
 #define SDS_HDR(T,s) ((struct sdshdr##T *)((s)-(sizeof(struct sdshdr##T))))
 #define SDS_TYPE_5_LEN(f) ((f)>>SDS_TYPE_BITS)
+#define sdslen(s) inginxSdslen(s)
+#define sdsavail(s) inginxSdsavail(s)
+#define sdssetlen(s, snewlen) inginxSdssetlen(s, snewlen)
+#define sdsinclen(s, inc) inginxSdsinclen(s, inc)
+#define sdsalloc(s) inginxSdsalloc(s)
+#define sdssetalloc(s, newlen) inginxSdssetalloc(s, newlen)
 
-static inline size_t sdslen(const sds s) {
+#define sdsnewlen(init, initlen) inginxSdsnewlen(init, initlen)
+#define sdsnew(init) inginxSdsnew(init)
+#define sdsempty inginxSdsempty
+#define sdsdup(s) inginxSdsdup(s)
+#define sdsfree(s) inginxSdsfree(s)
+#define sdsgrowzero(s, len) inginxSdsgrowzero(s, len)
+#define sdscatlen(s, t, len) inginxSdscatlen(s, t, len)
+#define sdscat(s, t) inginxSdscat(s, t)
+#define sdscatsds(s, t) inginxSdscatsds(s, t)
+#define sdscpylen(s, t, len) inginxSdscpylen(s, t, len)
+#define sdscpy(s, t) inginxSdscpy(s, t)
+
+#define sdscatvprintf(s, fmt, ap) inginxSdscatvprintf(s, fmt, ap)
+#define sdscatprintf inginxSdscatprintf
+#define sdscatfmt inginxSdscatfmt
+#define sdstrim(s, cset) inginxSdstrim(s, cset)
+#define sdsrange(s, start, end) inginxSdsrange(s, start, end)
+#define sdsupdatelen(s) inginxSdsupdatelen(s)
+#define sdsclear(s) inginxSdsclear(s)
+#define sdscmp(s1, s2) inginxSdscmp(s1, s2)
+#define sdssplitlen(s, len, sep, seplen, count) inginxSdssplitlen(s, len, sep, seplen, count)
+#define sdsfreesplitres(tokens, count) inginxSdsfreesplitres(tokens, count)
+#define sdstolower(s) inginxSdstolower(s)
+#define sdstoupper(s) inginxSdstoupper(s)
+#define sdsfromlonglong(value) inginxSdsfromlonglong(value)
+#define sdscatrepr(s, p, len) inginxSdscatrepr(s, p, len)
+#define sdssplitargs(line, argc) inginxSdssplitargs(line, argc)
+#define sdsmapchars(s, from, to, setlen) inginxSdsmapchars(s, from, to, setlen)
+#define sdsjoin(argv, argc, sep) inginxSdsjoin(argv, argc, sep)
+#define sdsjoinsds(argv, argc, sep, seplen) inginxSdsjoinsds(argv, argc, sep, seplen)
+
+#define sdsMakeRoomFor(s, addlen) inginxSdsMakeRoomFor(s, addlen)
+#define sdsIncrLen(s, incr) inginxSdsIncrLen(s, incr)
+#define sdsRemoveFreeSpace(s) inginxSdsRemoveFreeSpace(s)
+#define sdsAllocSize(s) inginxSdsAllocSize(s)
+#define sdsAllocPtr(s) inginxSdsAllocPtr(s)
+
+#define sds_malloc(size) inginxSds_malloc(size)
+#define sds_realloc(ptr, size) inginxSds_realloc(ptr, size)
+#define sds_free(ptr) inginxSds_free(ptr)
+
+#define sdsTest(argc, argv) inginxSdsTest(argc, argv)
+
+static inline size_t inginxSdslen(const sds s) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
         case SDS_TYPE_5:
@@ -104,7 +153,7 @@ static inline size_t sdslen(const sds s) {
     return 0;
 }
 
-static inline size_t sdsavail(const sds s) {
+static inline size_t inginxSdsavail(const sds s) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
         case SDS_TYPE_5: {
@@ -130,7 +179,7 @@ static inline size_t sdsavail(const sds s) {
     return 0;
 }
 
-static inline void sdssetlen(sds s, size_t newlen) {
+static inline void inginxSdssetlen(sds s, size_t newlen) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
         case SDS_TYPE_5:
@@ -154,7 +203,7 @@ static inline void sdssetlen(sds s, size_t newlen) {
     }
 }
 
-static inline void sdsinclen(sds s, size_t inc) {
+static inline void inginxSdsinclen(sds s, size_t inc) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
         case SDS_TYPE_5:
@@ -180,7 +229,7 @@ static inline void sdsinclen(sds s, size_t inc) {
 }
 
 /* sdsalloc() = sdsavail() + sdslen() */
-static inline size_t sdsalloc(const sds s) {
+static inline size_t inginxSdsalloc(const sds s) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
         case SDS_TYPE_5:
@@ -197,7 +246,7 @@ static inline size_t sdsalloc(const sds s) {
     return 0;
 }
 
-static inline void sdssetalloc(sds s, size_t newlen) {
+static inline void inginxSdssetalloc(sds s, size_t newlen) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
         case SDS_TYPE_5:
@@ -218,60 +267,60 @@ static inline void sdssetalloc(sds s, size_t newlen) {
     }
 }
 
-sds sdsnewlen(const void *init, size_t initlen);
-sds sdsnew(const char *init);
-sds sdsempty(void);
-sds sdsdup(const sds s);
-void sdsfree(sds s);
-sds sdsgrowzero(sds s, size_t len);
-sds sdscatlen(sds s, const void *t, size_t len);
-sds sdscat(sds s, const char *t);
-sds sdscatsds(sds s, const sds t);
-sds sdscpylen(sds s, const char *t, size_t len);
-sds sdscpy(sds s, const char *t);
+sds inginxSdsnewlen(const void *init, size_t initlen);
+sds inginxSdsnew(const char *init);
+sds inginxSdsempty(void);
+sds inginxSdsdup(const sds s);
+void inginxSdsfree(sds s);
+sds inginxSdsgrowzero(sds s, size_t len);
+sds inginxSdscatlen(sds s, const void *t, size_t len);
+sds inginxSdscat(sds s, const char *t);
+sds inginxSdscatsds(sds s, const sds t);
+sds inginxSdscpylen(sds s, const char *t, size_t len);
+sds inginxSdscpy(sds s, const char *t);
 
-sds sdscatvprintf(sds s, const char *fmt, va_list ap);
+sds inginxSdscatvprintf(sds s, const char *fmt, va_list ap);
 #ifdef __GNUC__
-sds sdscatprintf(sds s, const char *fmt, ...)
+sds inginxSdscatprintf(sds s, const char *fmt, ...)
     __attribute__((format(printf, 2, 3)));
 #else
-sds sdscatprintf(sds s, const char *fmt, ...);
+sds inginxSdscatprintf(sds s, const char *fmt, ...);
 #endif
 
-sds sdscatfmt(sds s, char const *fmt, ...);
-sds sdstrim(sds s, const char *cset);
-void sdsrange(sds s, int start, int end);
-void sdsupdatelen(sds s);
-void sdsclear(sds s);
-int sdscmp(const sds s1, const sds s2);
-sds *sdssplitlen(const char *s, int len, const char *sep, int seplen, int *count);
-void sdsfreesplitres(sds *tokens, int count);
-void sdstolower(sds s);
-void sdstoupper(sds s);
-sds sdsfromlonglong(long long value);
-sds sdscatrepr(sds s, const char *p, size_t len);
+sds inginxSdscatfmt(sds s, char const *fmt, ...);
+sds inginxSdstrim(sds s, const char *cset);
+void inginxSdsrange(sds s, int start, int end);
+void inginxSdsupdatelen(sds s);
+void inginxSdsclear(sds s);
+int inginxSdscmp(const sds s1, const sds s2);
+sds *inginxSdssplitlen(const char *s, int len, const char *sep, int seplen, int *count);
+void inginxSdsfreesplitres(sds *tokens, int count);
+void inginxSdstolower(sds s);
+void inginxSdstoupper(sds s);
+sds inginxSdsfromlonglong(long long value);
+sds inginxSdscatrepr(sds s, const char *p, size_t len);
 sds *sdssplitargs(const char *line, int *argc);
-sds sdsmapchars(sds s, const char *from, const char *to, size_t setlen);
-sds sdsjoin(char **argv, int argc, char *sep);
-sds sdsjoinsds(sds *argv, int argc, const char *sep, size_t seplen);
+sds inginxSdsmapchars(sds s, const char *from, const char *to, size_t setlen);
+sds inginxSdsjoin(char **argv, int argc, char *sep);
+sds inginxSdsjoinsds(sds *argv, int argc, const char *sep, size_t seplen);
 
 /* Low level functions exposed to the user API */
-sds sdsMakeRoomFor(sds s, size_t addlen);
-void sdsIncrLen(sds s, int incr);
-sds sdsRemoveFreeSpace(sds s);
-size_t sdsAllocSize(sds s);
-void *sdsAllocPtr(sds s);
+sds inginxSdsMakeRoomFor(sds s, size_t addlen);
+void inginxSdsIncrLen(sds s, int incr);
+sds inginxSdsRemoveFreeSpace(sds s);
+size_t inginxSdsAllocSize(sds s);
+void *inginxSdsAllocPtr(sds s);
 
 /* Export the allocator used by SDS to the program using SDS.
  * Sometimes the program SDS is linked to, may use a different set of
  * allocators, but may want to allocate or free things that SDS will
  * respectively free or allocate. */
-void *sds_malloc(size_t size);
-void *sds_realloc(void *ptr, size_t size);
-void sds_free(void *ptr);
+void *inginxSds_malloc(size_t size);
+void *inginxSds_realloc(void *ptr, size_t size);
+void inginxSds_free(void *ptr);
 
 #ifdef REDIS_TEST
-int sdsTest(int argc, char *argv[]);
+int inginxSdsTest(int argc, char *argv[]);
 #endif
 
 #ifdef __cplusplus
