@@ -1,4 +1,4 @@
-/* zmalloc - total amount of allocated memory aware version of malloc()
+/* inginxMalloc - total amount of allocated memory aware version of malloc()
  *
  * Copyright (c) 2009-2010, Salvatore Sanfilippo <antirez at gmail dot com>
  * All rights reserved.
@@ -35,9 +35,9 @@
 
 /* This function provide us access to the original libc free(). This is useful
  * for instance to free results obtained by backtrace_symbols(). We need
- * to define this function before including zmalloc.h that may shadow the
+ * to define this function before including inginxMalloc.h that may shadow the
  * free implementation if we use jemalloc or another non standard allocator. */
-void zlibc_free(void *ptr) {
+void inginxLibc_free(void *ptr) {
     free(ptr);
 }
 
@@ -69,19 +69,19 @@ void zlibc_free(void *ptr) {
 #endif
 
 #if defined(__ATOMIC_RELAXED)
-#define update_zmalloc_stat_add(__n) __atomic_add_fetch(&used_memory, (__n), __ATOMIC_RELAXED)
-#define update_zmalloc_stat_sub(__n) __atomic_sub_fetch(&used_memory, (__n), __ATOMIC_RELAXED)
+#define update_inginxMalloc_stat_add(__n) __atomic_add_fetch(&used_memory, (__n), __ATOMIC_RELAXED)
+#define update_inginxMalloc_stat_sub(__n) __atomic_sub_fetch(&used_memory, (__n), __ATOMIC_RELAXED)
 #elif defined(HAVE_ATOMIC)
-#define update_zmalloc_stat_add(__n) __sync_add_and_fetch(&used_memory, (__n))
-#define update_zmalloc_stat_sub(__n) __sync_sub_and_fetch(&used_memory, (__n))
+#define update_inginxMalloc_stat_add(__n) __sync_add_and_fetch(&used_memory, (__n))
+#define update_inginxMalloc_stat_sub(__n) __sync_sub_and_fetch(&used_memory, (__n))
 #else
-#define update_zmalloc_stat_add(__n) do { \
+#define update_inginxMalloc_stat_add(__n) do { \
     pthread_mutex_lock(&used_memory_mutex); \
     used_memory += (__n); \
     pthread_mutex_unlock(&used_memory_mutex); \
 } while(0)
 
-#define update_zmalloc_stat_sub(__n) do { \
+#define update_inginxMalloc_stat_sub(__n) do { \
     pthread_mutex_lock(&used_memory_mutex); \
     used_memory -= (__n); \
     pthread_mutex_unlock(&used_memory_mutex); \
@@ -89,101 +89,101 @@ void zlibc_free(void *ptr) {
 
 #endif
 
-#define update_zmalloc_stat_alloc(__n) do { \
+#define update_inginxMalloc_stat_alloc(__n) do { \
     size_t _n = (__n); \
     if (_n&(sizeof(long)-1)) _n += sizeof(long)-(_n&(sizeof(long)-1)); \
-    if (zmalloc_thread_safe) { \
-        update_zmalloc_stat_add(_n); \
+    if (inginxMalloc_thread_safe) { \
+        update_inginxMalloc_stat_add(_n); \
     } else { \
         used_memory += _n; \
     } \
 } while(0)
 
-#define update_zmalloc_stat_free(__n) do { \
+#define update_inginxMalloc_stat_free(__n) do { \
     size_t _n = (__n); \
     if (_n&(sizeof(long)-1)) _n += sizeof(long)-(_n&(sizeof(long)-1)); \
-    if (zmalloc_thread_safe) { \
-        update_zmalloc_stat_sub(_n); \
+    if (inginxMalloc_thread_safe) { \
+        update_inginxMalloc_stat_sub(_n); \
     } else { \
         used_memory -= _n; \
     } \
 } while(0)
 
 static size_t used_memory = 0;
-static int zmalloc_thread_safe = 0;
+static int inginxMalloc_thread_safe = 0;
 pthread_mutex_t used_memory_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static void zmalloc_default_oom(size_t size) {
-    fprintf(stderr, "zmalloc: Out of memory trying to allocate %zu bytes\n",
+static void inginxMalloc_default_oom(size_t size) {
+    fprintf(stderr, "inginxMalloc: Out of memory trying to allocate %zu bytes\n",
         size);
     fflush(stderr);
     abort();
 }
 
-static void (*zmalloc_oom_handler)(size_t) = zmalloc_default_oom;
+static void (*inginxMalloc_oom_handler)(size_t) = inginxMalloc_default_oom;
 
-void *zmalloc(size_t size) {
+void *inginxMalloc(size_t size) {
     void *ptr = malloc(size+PREFIX_SIZE);
 
-    if (!ptr) zmalloc_oom_handler(size);
+    if (!ptr) inginxMalloc_oom_handler(size);
 #ifdef HAVE_MALLOC_SIZE
-    update_zmalloc_stat_alloc(zmalloc_size(ptr));
+    update_inginxMalloc_stat_alloc(inginxMalloc_size(ptr));
     return ptr;
 #else
     *((size_t*)ptr) = size;
-    update_zmalloc_stat_alloc(size+PREFIX_SIZE);
+    update_inginxMalloc_stat_alloc(size+PREFIX_SIZE);
     return (char*)ptr+PREFIX_SIZE;
 #endif
 }
 
-void *zcalloc(size_t size) {
+void *inginxCalloc(size_t size) {
     void *ptr = calloc(1, size+PREFIX_SIZE);
 
-    if (!ptr) zmalloc_oom_handler(size);
+    if (!ptr) inginxMalloc_oom_handler(size);
 #ifdef HAVE_MALLOC_SIZE
-    update_zmalloc_stat_alloc(zmalloc_size(ptr));
+    update_inginxMalloc_stat_alloc(inginxMalloc_size(ptr));
     return ptr;
 #else
     *((size_t*)ptr) = size;
-    update_zmalloc_stat_alloc(size+PREFIX_SIZE);
+    update_inginxMalloc_stat_alloc(size+PREFIX_SIZE);
     return (char*)ptr+PREFIX_SIZE;
 #endif
 }
 
-void *zrealloc(void *ptr, size_t size) {
+void *inginxRealloc(void *ptr, size_t size) {
 #ifndef HAVE_MALLOC_SIZE
     void *realptr;
 #endif
     size_t oldsize;
     void *newptr;
 
-    if (ptr == NULL) return zmalloc(size);
+    if (ptr == NULL) return inginxMalloc(size);
 #ifdef HAVE_MALLOC_SIZE
-    oldsize = zmalloc_size(ptr);
+    oldsize = inginxMalloc_size(ptr);
     newptr = realloc(ptr,size);
-    if (!newptr) zmalloc_oom_handler(size);
+    if (!newptr) inginxMalloc_oom_handler(size);
 
-    update_zmalloc_stat_free(oldsize);
-    update_zmalloc_stat_alloc(zmalloc_size(newptr));
+    update_inginxMalloc_stat_free(oldsize);
+    update_inginxMalloc_stat_alloc(inginxMalloc_size(newptr));
     return newptr;
 #else
     realptr = (char*)ptr-PREFIX_SIZE;
     oldsize = *((size_t*)realptr);
     newptr = realloc(realptr,size+PREFIX_SIZE);
-    if (!newptr) zmalloc_oom_handler(size);
+    if (!newptr) inginxMalloc_oom_handler(size);
 
     *((size_t*)newptr) = size;
-    update_zmalloc_stat_free(oldsize);
-    update_zmalloc_stat_alloc(size);
+    update_inginxMalloc_stat_free(oldsize);
+    update_inginxMalloc_stat_alloc(size);
     return (char*)newptr+PREFIX_SIZE;
 #endif
 }
 
-/* Provide zmalloc_size() for systems where this function is not provided by
+/* Provide inginxMalloc_size() for systems where this function is not provided by
  * malloc itself, given that in that case we store a header with this
  * information as the first bytes of every allocation. */
 #ifndef HAVE_MALLOC_SIZE
-size_t zmalloc_size(void *ptr) {
+size_t inginxMalloc_size(void *ptr) {
     void *realptr = (char*)ptr-PREFIX_SIZE;
     size_t size = *((size_t*)realptr);
     /* Assume at least that all the allocations are padded at sizeof(long) by
@@ -193,7 +193,7 @@ size_t zmalloc_size(void *ptr) {
 }
 #endif
 
-void zfree(void *ptr) {
+void inginxFree(void *ptr) {
 #ifndef HAVE_MALLOC_SIZE
     void *realptr;
     size_t oldsize;
@@ -201,30 +201,30 @@ void zfree(void *ptr) {
 
     if (ptr == NULL) return;
 #ifdef HAVE_MALLOC_SIZE
-    update_zmalloc_stat_free(zmalloc_size(ptr));
+    update_inginxMalloc_stat_free(inginxMalloc_size(ptr));
     free(ptr);
 #else
     realptr = (char*)ptr-PREFIX_SIZE;
     oldsize = *((size_t*)realptr);
-    update_zmalloc_stat_free(oldsize+PREFIX_SIZE);
+    update_inginxMalloc_stat_free(oldsize+PREFIX_SIZE);
     free(realptr);
 #endif
 }
 
-char *zstrdup(const char *s) {
+char *inginxStrdup(const char *s) {
     size_t l = strlen(s)+1;
-    char *p = zmalloc(l);
+    char *p = inginxMalloc(l);
 
     memcpy(p,s,l);
     return p;
 }
 
-size_t zmalloc_used_memory(void) {
+size_t inginxMalloc_used_memory(void) {
     size_t um;
 
-    if (zmalloc_thread_safe) {
+    if (inginxMalloc_thread_safe) {
 #if defined(__ATOMIC_RELAXED) || defined(HAVE_ATOMIC)
-        um = update_zmalloc_stat_add(0);
+        um = update_inginxMalloc_stat_add(0);
 #else
         pthread_mutex_lock(&used_memory_mutex);
         um = used_memory;
@@ -238,17 +238,17 @@ size_t zmalloc_used_memory(void) {
     return um;
 }
 
-void zmalloc_enable_thread_safeness(void) {
-    zmalloc_thread_safe = 1;
+void inginxMalloc_enable_thread_safeness(void) {
+    inginxMalloc_thread_safe = 1;
 }
 
-void zmalloc_set_oom_handler(void (*oom_handler)(size_t)) {
-    zmalloc_oom_handler = oom_handler;
+void inginxMalloc_set_oom_handler(void (*oom_handler)(size_t)) {
+    inginxMalloc_oom_handler = oom_handler;
 }
 
 /* Get the RSS information in an OS-specific way.
  *
- * WARNING: the function zmalloc_get_rss() is not designed to be fast
+ * WARNING: the function inginxMalloc_get_rss() is not designed to be fast
  * and may not be called in the busy loops where Redis tries to release
  * memory expiring or swapping out objects.
  *
@@ -262,7 +262,7 @@ void zmalloc_set_oom_handler(void (*oom_handler)(size_t)) {
 #include <sys/stat.h>
 #include <fcntl.h>
 
-size_t zmalloc_get_rss(void) {
+size_t inginxMalloc_get_rss(void) {
     int page = sysconf(_SC_PAGESIZE);
     size_t rss;
     char buf[4096];
@@ -302,7 +302,7 @@ size_t zmalloc_get_rss(void) {
 #include <mach/task.h>
 #include <mach/mach_init.h>
 
-size_t zmalloc_get_rss(void) {
+size_t inginxMalloc_get_rss(void) {
     task_t task = MACH_PORT_NULL;
     struct task_basic_info t_info;
     mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
@@ -314,29 +314,29 @@ size_t zmalloc_get_rss(void) {
     return t_info.resident_size;
 }
 #else
-size_t zmalloc_get_rss(void) {
+size_t inginxMalloc_get_rss(void) {
     /* If we can't get the RSS in an OS-specific way for this system just
-     * return the memory usage we estimated in zmalloc()..
+     * return the memory usage we estimated in inginxMalloc()..
      *
      * Fragmentation will appear to be always 1 (no fragmentation)
      * of course... */
-    return zmalloc_used_memory();
+    return inginxMalloc_used_memory();
 }
 #endif
 
 /* Fragmentation = RSS / allocated-bytes */
-float zmalloc_get_fragmentation_ratio(size_t rss) {
-    return (float)rss/zmalloc_used_memory();
+float inginxMalloc_get_fragmentation_ratio(size_t rss) {
+    return (float)rss/inginxMalloc_used_memory();
 }
 
 /* Get the sum of the specified field (converted form kb to bytes) in
  * /proc/self/smaps. The field must be specified with trailing ":" as it
  * apperas in the smaps output.
  *
- * Example: zmalloc_get_smap_bytes_by_field("Rss:");
+ * Example: inginxMalloc_get_smap_bytes_by_field("Rss:");
  */
 #if defined(HAVE_PROC_SMAPS)
-size_t zmalloc_get_smap_bytes_by_field(char *field) {
+size_t inginxMalloc_get_smap_bytes_by_field(char *field) {
     char line[1024];
     size_t bytes = 0;
     FILE *fp = fopen("/proc/self/smaps","r");
@@ -356,14 +356,14 @@ size_t zmalloc_get_smap_bytes_by_field(char *field) {
     return bytes;
 }
 #else
-size_t zmalloc_get_smap_bytes_by_field(char *field) {
+size_t inginxMalloc_get_smap_bytes_by_field(char *field) {
     ((void) field);
     return 0;
 }
 #endif
 
-size_t zmalloc_get_private_dirty(void) {
-    return zmalloc_get_smap_bytes_by_field("Private_Dirty:");
+size_t inginxMalloc_get_private_dirty(void) {
+    return inginxMalloc_get_smap_bytes_by_field("Private_Dirty:");
 }
 
 /* Returns the size of physical memory (RAM) in bytes.
@@ -379,7 +379,7 @@ size_t zmalloc_get_private_dirty(void) {
  * 3) Was modified for Redis by Matt Stancliff.
  * 4) This note exists in order to comply with the original license.
  */
-size_t zmalloc_get_memory_size(void) {
+size_t inginxMalloc_get_memory_size(void) {
 #if defined(__unix__) || defined(__unix) || defined(unix) || \
     (defined(__APPLE__) && defined(__MACH__))
 #if defined(CTL_HW) && (defined(HW_MEMSIZE) || defined(HW_PHYSMEM64))

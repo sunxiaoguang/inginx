@@ -69,23 +69,39 @@ extern "C" {
 #define ZMALLOC_LIB "libc"
 #endif
 
-void *zmalloc(size_t size);
-void *zcalloc(size_t size);
-void *zrealloc(void *ptr, size_t size);
-void zfree(void *ptr);
-char *zstrdup(const char *s);
-size_t zmalloc_used_memory(void);
-void zmalloc_enable_thread_safeness(void);
-void zmalloc_set_oom_handler(void (*oom_handler)(size_t));
-float zmalloc_get_fragmentation_ratio(size_t rss);
-size_t zmalloc_get_rss(void);
-size_t zmalloc_get_private_dirty(void);
-size_t zmalloc_get_smap_bytes_by_field(char *field);
-size_t zmalloc_get_memory_size(void);
-void zlibc_free(void *ptr);
+#define zmalloc(size) inginxMalloc(size)
+#define zcalloc(size) inginxCalloc(size)
+#define zrealloc(ptr, size) inginxRealloc(ptr, size)
+#define zfree(ptr) inginxFree(ptr)
+#define zstrdup(s) inginxStrdup(s)
+#define zmalloc_used_memory inginxMalloc_used_memory
+#define zmalloc_enable_thread_safeness inginxMalloc_enable_thread_safeness
+#define zmalloc_set_oom_handler(handler) inginxMalloc_set_oom_handler(handler)
+#define zmalloc_get_fragmentation_ratio(rss) inginxMalloc_get_fragmentation_ratio(rss)
+#define zmalloc_get_rss inginxMalloc_get_rss
+#define zmalloc_get_private_dirty inginxMalloc_get_private_dirty
+#define zmalloc_get_smap_bytes_by_field(field) inginxMalloc_get_smap_bytes_by_field(field)
+#define zmalloc_get_memory_size inginxMalloc_get_memory_size
+#define zlibc_free(ptr) inginxLibc_free(ptr)
+#define zmalloc_size(ptr) inginxMalloc_size(ptr)
+
+void *inginxMalloc(size_t size);
+void *inginxCalloc(size_t size);
+void *inginxRealloc(void *ptr, size_t size);
+void inginxFree(void *ptr);
+char *inginxStrdup(const char *s);
+size_t inginxMalloc_used_memory(void);
+void inginxMalloc_enable_thread_safeness(void);
+void inginxMalloc_set_oom_handler(void (*oom_handler)(size_t));
+float inginxMalloc_get_fragmentation_ratio(size_t rss);
+size_t inginxMalloc_get_rss(void);
+size_t inginxMalloc_get_private_dirty(void);
+size_t inginxMalloc_get_smap_bytes_by_field(char *field);
+size_t inginxMalloc_get_memory_size(void);
+void inginxLibc_free(void *ptr);
 
 #ifndef HAVE_MALLOC_SIZE
-size_t zmalloc_size(void *ptr);
+size_t inginxMalloc_size(void *ptr);
 #endif
 
 #ifdef __cplusplus
