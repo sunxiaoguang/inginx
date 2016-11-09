@@ -471,6 +471,10 @@ void inginxServerLog(inginxServer *s, inginxLogLevel level, const char *func, co
   int32_t bufferSize = sizeof(buffer);
   int32_t size;
 
+  if (s->logger == NULL) {
+    return;
+  }
+
   va_start(args, fmt);
   size = vsnprintf(buffer, bufferSize, fmt, args);
   va_end(args);

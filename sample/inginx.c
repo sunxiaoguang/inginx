@@ -24,9 +24,9 @@ void serverListener2(inginxServer *s, inginxClient *c, inginxEventType type, voi
       printf("Disconnected\n");
       break;
     case INGINX_EVENT_TYPE_REQUEST:
-      printf("url is %s\n", inginxMessageUrl(eventData));
-      printf("ua is %s\n", inginxMessageHeader(eventData, "User-Agent"));
-      printf("host is %s\n", inginxMessageHeader(eventData, "Host"));
+      //printf("url is %s\n", inginxMessageUrl(eventData));
+      //printf("ua is %s\n", inginxMessageHeader(eventData, "User-Agent"));
+      //printf("host is %s\n", inginxMessageHeader(eventData, "Host"));
       inginxClientSetStatus(c, 200);
       inginxClientAddDateHeader(c, "Date", 0);
       inginxClientAddHeader(c, "Content-Type", "application/json");
@@ -76,7 +76,7 @@ int main(int argc, const char **argv)
 {
   setupSignalHandlers();
   s = inginxServerHz(inginxServerConnectionLimit(inginxServerBind(inginxServerListener(inginxServerLogger(inginxServerGroupCreate(3, 0),
-            inginxServerSimpleLogger, INGINX_LOG_LEVEL_TRACE, NULL), serverListener2, 0xFFFFFFFF, NULL), "localhost:8888", 1), 1024), 1);
+            inginxServerSimpleLogger, INGINX_LOG_LEVEL_TRACE, NULL), serverListener2, 0xFFFFFFFF, NULL), "localhost:8888", 16), 1024), 1);
   inginxServerFree(inginxServerMain(s));
   fprintf(stderr, "Returned from server loop, free it now\n");
   return 0;
