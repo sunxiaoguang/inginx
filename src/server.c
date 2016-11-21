@@ -28,6 +28,7 @@ static void doCreateServer(inginxServer *s)
   s->listening = listCreate();
   s->hz = 10;
   s->maxIdleTime = 1000000000;
+  s->parser = http_parser_execute_strict;
 }
 
 inginxServer *inginxServerCreate()
@@ -262,6 +263,7 @@ static inginxClient *createClient(inginxServer *s, int fd) {
   c->server = s;
 
   http_parser_init(&c->parser, HTTP_REQUEST);
+  c->message.major = c->message.minor = c->parser.http_major = c->parser.http_minor = 1;
   c->parser.data = c;
   c->id = 0;
   c->fd = fd;
@@ -517,4 +519,36 @@ void inginxServerClientDestroyed(inginxServer *server, inginxClient *client)
 const char *inginxVersion(void)
 {
   return "1.0";
+}
+
+int32_t inginxServerIsDispatchingThread(inginxServer *server)
+{
+  return pthread_equal(server->dispatchingThread, pthread_self());
+}
+
+static void doInginxServerParser(inginxServer *server, http_parser_execute parser)
+{
+  int32_t idx;
+  server->parser = parser;
+  if (server->group) {
+    for (idx = 0; idx < server->groupSize; ++idx) {
+      server->group[idx].parser = parser;
+    }
+  }
+}
+
+inginxServer *inginxServerStrict(inginxServer *server)
+{
+  if (server != NULL) {
+    doInginxServerParser(server, http_parser_execute_strict);
+  }
+  return server;
+}
+
+inginxServer *inginxServerRelaxed(inginxServer *server)
+{
+  if (server != NULL) {
+    doInginxServerParser(server, http_parser_execute_relaxed);
+  }
+  return server;
 }

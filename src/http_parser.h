@@ -46,13 +46,6 @@ typedef unsigned __int64 uint64_t;
 #include <stdint.h>
 #endif
 
-/* Compile with -DHTTP_PARSER_STRICT=0 to make less checks, but run
- * faster
- */
-#ifndef HTTP_PARSER_STRICT
-# define HTTP_PARSER_STRICT 1
-#endif
-
 /* Maximium header size allowed. If the macro is not defined
  * before including this header then the default is used. To
  * change the maximum header size, define the macro in the build
@@ -319,7 +312,15 @@ void http_parser_settings_init(http_parser_settings *settings);
 
 /* Executes the parser. Returns number of parsed bytes. Sets
  * `parser->http_errno` on error. */
-size_t http_parser_execute(http_parser *parser,
+typedef size_t (*http_parser_execute)(http_parser *parser,
+                           const http_parser_settings *settings,
+                           const char *data,
+                           size_t len);
+size_t http_parser_execute_strict(http_parser *parser,
+                           const http_parser_settings *settings,
+                           const char *data,
+                           size_t len);
+size_t http_parser_execute_relaxed(http_parser *parser,
                            const http_parser_settings *settings,
                            const char *data,
                            size_t len);
@@ -346,7 +347,11 @@ const char *http_errno_description(enum http_errno err);
 void http_parser_url_init(struct http_parser_url *u);
 
 /* Parse a URL; return nonzero on failure */
-int http_parser_parse_url(const char *buf, size_t buflen,
+typedef int (*http_parser_parse_url)(const char *, size_t, int, struct http_parser_url *);
+int http_parser_parse_url_strict(const char *buf, size_t buflen,
+                          int is_connect,
+                          struct http_parser_url *u);
+int http_parser_parse_url_relaxed(const char *buf, size_t buflen,
                           int is_connect,
                           struct http_parser_url *u);
 

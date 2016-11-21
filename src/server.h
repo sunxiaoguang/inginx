@@ -34,6 +34,8 @@ typedef struct inginxServer
   char error[ANET_ERR_LEN];
   int32_t groupSize;
   inginxServer *group;
+  pthread_t dispatchingThread;
+  http_parser_execute parser;
 } inginxServer;
 
 void inginxServerClientRequest(inginxServer *inginxServer, inginxClient *client);
@@ -45,7 +47,8 @@ void inginxServerLog(inginxServer *inginxServer, inginxLogLevel level, const cha
 #else
 void inginxServerLog(inginxServer *inginxServer, inginxLogLevel level, const char *func, const char *file, uint32_t line, const char *fmt, ...);
 #endif
-void inginxServerLogFlush(inginxServer *inginxServer);
+void inginxServerLogFlush(inginxServer *server);
+int32_t inginxServerIsDispatchingThread(inginxServer *server);
 
 #define INGINX_LOG_TRACE_ENABLED(SRV) ((SRV)->loggerLevel <= INGINX_LOG_LEVEL_TRACE)
 #define INGINX_LOG_DEBUG_ENABLED(SRV) ((SRV)->loggerLevel <= INGINX_LOG_LEVEL_DEBUG)

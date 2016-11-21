@@ -79,6 +79,8 @@ int inginxClientsHandleWithPendingWrites(aeEventLoop *el);
 void inginxClientsFreeInAsyncFreeQueue(aeEventLoop *el);
 void inginxClientFree(aeEventLoop *el, inginxClient *c);
 
+inginxClient *inginxClientConnect(inginxServer *server, const char *url, inginxMethod method);
+
 #ifdef __cplusplus
 }
 #endif

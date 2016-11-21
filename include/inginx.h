@@ -96,6 +96,8 @@ inginxServer *inginxServerMain(inginxServer *server);
 inginxServer *inginxServerShutdown(inginxServer *server);
 inginxServer *inginxServerLogger(inginxServer *server, inginxLogger logger, inginxLogLevel level, void *opaque);
 inginxServer *inginxServerListener(inginxServer *server, inginxListener listener, int32_t mask, void *opaque);
+inginxServer *inginxServerStrict(inginxServer *server);
+inginxServer *inginxServerRelaxed(inginxServer *server);
 void inginxServerSimpleLogger(inginxServer *s, inginxLogLevel level, const char *func, const char *file, uint32_t line, const char *log, void *opaque);
 void inginxServerFree(inginxServer *inginxServer);
 

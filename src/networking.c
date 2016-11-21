@@ -557,7 +557,7 @@ void inginxClientReadFrom(aeEventLoop *el, int fd, void *privdata, int mask)
     inginxClientFree(el, c);
     return;
   }
-  parsed = http_parser_execute(&c->parser, &settings, buffer, nread);
+  parsed = s->parser(&c->parser, &settings, buffer, nread);
   if (c->parser.upgrade) {
     INGINX_LOG_WARN(s, "HTTP upgrade is not supported");
     inginxClientSendError(c, 500);
@@ -891,4 +891,9 @@ int32_t inginxClientGetRemoteAddress(inginxClient *client, char *address, size_t
 int inginxClientGetLocalAddress(inginxClient *client, char *address, size_t size, uint16_t *port)
 {
   return inginxClientGetAddress(client, address, size, port, anetSockName);
+}
+
+inginxClient *inginxClientConnect(inginxServer *server, const char *url, inginxMethod method)
+{
+  return NULL;
 }
