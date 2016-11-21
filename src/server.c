@@ -340,6 +340,7 @@ inginxServer* inginxServerMain(inginxServer *s)
   if (s == NULL) {
     return s;
   }
+  signal(SIGPIPE, SIG_IGN);
   if (s->group) {
     threads = zmalloc(sizeof(pthread_t) * s->groupSize);
     for (idx = 0; idx < s->groupSize; ++idx) {
