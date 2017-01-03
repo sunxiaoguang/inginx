@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 
 #include "server.h"
 #include "zmalloc.h"
@@ -17,6 +18,7 @@ static int onBody(http_parser*, const char *at, size_t length);
 static int onMessageComplete(http_parser *parser);
 static int onChunkHeader(http_parser *parser);
 static int onChunkComplete(http_parser *parser);
+static void resetMessage(inginxMessage *message);
 
 static http_parser_settings settings = {
   onMessageBegin,
@@ -354,14 +356,9 @@ void inginxClientFree(aeEventLoop *el, inginxClient *c) {
     inginxServer *s = el->data;
     /* Free data structures. */
     listRelease(c->reply);
-    if (c->message.url) {
-      sdsfree(c->message.url);
-    }
+    resetMessage(&c->message);
     if (c->message.headers) {
       listRelease(c->message.headers);
-    }
-    if (c->message.body) {
-      sdsfree(c->message.body);
     }
 
     /* Unlink the client: this will close the socket, remove the I/O
@@ -653,8 +650,6 @@ static int onBody(http_parser *parser, const char *at, size_t length)
 
 static int onMessageComplete(http_parser *parser)
 {
-  listIter *li;
-  listNode *ln;
   inginxClient *c = parser->data;
   c->message.status = parser->status_code;
   c->message.method = parser->method;
@@ -664,14 +659,7 @@ static int onMessageComplete(http_parser *parser)
   c->lengthSent = 0;
   inginxServerClientRequest(c->server, c);
   c->state = INGINX_CLIENT_STATE_BEGIN;
-  if (c->message.url) {
-    sdsfree(c->message.url);
-    c->message.url = NULL;
-  }
-  if (c->message.body) {
-    sdsfree(c->message.body);
-    c->message.body = NULL;
-  }
+  resetMessage(&c->message);
   if (c->field) {
     sdsfree(c->field);
     c->field = NULL;
@@ -680,12 +668,6 @@ static int onMessageComplete(http_parser *parser)
     sdsfree(c->value);
     c->value = NULL;
   }
-  li = listGetIterator(c->message.headers, AL_START_HEAD);
-  while ((ln = listNext(li)) != NULL) {
-    sdsfree(listNodeValue(ln));
-    listDelNode(c->message.headers, ln);
-  }
-  listReleaseIterator(li);
   return 0;
 }
 
@@ -697,6 +679,42 @@ static int onChunkHeader(http_parser *parser)
 static int onChunkComplete(http_parser *parser)
 {
   return 0;
+}
+
+static void resetMessage(inginxMessage *message)
+{
+  listIter *li;
+  listNode *ln;
+  if (message->urlDecoded != NULL) {
+    if (message->urlDecoded != message->url) {
+      sdsfree(message->urlDecoded);
+    }
+    message->urlDecoded = NULL;
+  }
+  if (message->url) {
+    sdsfree(message->url);
+    message->url = NULL;
+  }
+  if (message->parameter) {
+    sdsfree(message->parameter);
+    message->parameter = NULL;
+  }
+  li = listGetIterator(message->headers, AL_START_HEAD);
+  while ((ln = listNext(li)) != NULL) {
+    sdsfree(listNodeValue(ln));
+    listDelNode(message->headers, ln);
+  }
+  listReleaseIterator(li);
+  if (message->body) {
+    sdsfree(message->body);
+    message->body = NULL;
+  }
+  if (message->queryString) {
+    message->queryString = NULL;
+  }
+  if (message->parameterCursor) {
+    message->parameterCursor = NULL;
+  }
 }
 
 void inginxClientClose(inginxClient *c)
@@ -830,7 +848,87 @@ const char* inginxMessageUrl(const inginxMessage *message)
   return message->url;
 }
 
+static void inginxMessageDecodeUrl(inginxMessage *message)
+{
+#define CHECK_DECODED                   \
+  if (decoded == NULL) {                \
+    decoded = sdsnewlen(src, idx);      \
+  }
+#define H2I(x) (isdigit(x) ? x - '0' : x - 'W')
+  int32_t len = sdslen(message->url);
+  const char *src = message->url;
+  char chr, dst;
+  int32_t idx, hi, lo;
+  int32_t queryString = 0;
+  sds decoded = NULL;
+  for (idx = 0; idx < len; idx++) {
+    switch ((chr = src[idx])) {
+      case '%':
+        if (idx < len - 2 && isxdigit((hi = src[idx + 1])) && isxdigit((lo = src[idx + 2]))) {
+          hi = tolower(hi), lo = tolower(lo);
+          CHECK_DECODED
+          dst = (char) ((H2I(hi) << 4) | H2I(lo));
+          idx += 2;
+          decoded = sdscatlen(decoded, &dst, 1);
+        } else {
+          if (decoded != NULL) {
+            sdsfree(decoded);
+            decoded = NULL;
+          }
+          message->queryString = NULL;
+          return;
+        }
+        break;
+      case '+':
+        if (queryString) {
+          CHECK_DECODED
+          dst = ' ';
+          decoded = sdscatlen(decoded, &dst, 1);
+          break;
+        }
+        goto appendDecoded;
+      case '?':
+        if (!queryString) {
+          queryString = 1;
+          message->queryString = (const char *)(decoded != NULL ? sdslen(decoded) : idx);
+        }
+        /* FALL THROUGH */
+      default:
+appendDecoded:
+        if (decoded != NULL) {
+          decoded = sdscatlen(decoded, src + idx, 1);
+        }
+    }
+  }
+  if (decoded == NULL) {
+    message->urlDecoded = message->url;
+  } else {
+    message->urlDecoded = decoded;
+  }
+  if (queryString) {
+    message->queryString = message->urlDecoded + (uintptr_t) (message->queryString) + 1;
+  } else {
+    message->queryString = NULL;
+  }
+#undef CHECK_DECODED
+#undef H2I
+  return;
+}
+
+const char *inginxMessageUrlDecoded(const inginxMessage *message)
+{
+  if (message->urlDecoded == NULL) {
+    inginxMessageDecodeUrl((inginxMessage *) message);
+  }
+  return message->urlDecoded;
+}
+
 const char *inginxMessageHeader(const inginxMessage *message, const char *field)
+{
+  return inginxMessageHeaderNext(message, field, NULL);
+}
+
+const char *inginxMessageHeaderNext(const inginxMessage *message, const char *field, const char *cursor)
 {
   listIter *li;
   listNode *ln, *ln2;
@@ -843,6 +941,13 @@ const char *inginxMessageHeader(const inginxMessage *message, const char *field)
     ln2 = listNext(li);
     if (strcasecmp(listNodeValue(ln), field) == 0) {
       value = listNodeValue(ln2);
+      if (cursor != NULL) {
+        if (value == cursor) {
+          cursor = NULL;
+        }
+        value = NULL;
+        continue;
+      }
       break;
     }
   }
@@ -895,5 +1000,53 @@ int inginxClientGetLocalAddress(inginxClient *client, char *address, size_t size
 
 inginxClient *inginxClientConnect(inginxServer *server, const char *url, inginxMethod method)
 {
+  return NULL;
+}
+
+const char *inginxMessageParameter(const inginxMessage *message, const char *name)
+{
+  return inginxMessageParameterNext(message, name, NULL);
+}
+
+const char *inginxMessageParameterNext(const inginxMessage *constMessage, const char *name, const char *cursor)
+{
+  size_t nameLen;
+  inginxMessage *message = (inginxMessage *) constMessage;
+  const char *pos, *stop, *end;
+  const char *url = inginxMessageUrlDecoded(message);
+  if (url == NULL) {
+    return NULL;
+  }
+  end = url + sdslen((char *) url);
+  if (message->queryString == NULL || message->queryString + 1 == end) {
+    return NULL;
+  }
+
+  if (cursor == NULL) {
+    cursor = message->queryString;
+  } else {
+    cursor = message->parameterCursor;
+  }
+
+  nameLen = strlen(name);
+
+  for (pos = cursor; pos + nameLen < end; pos++) {
+    if ((pos == cursor || pos[-1] == '&') && pos[nameLen] == '=' && strncasecmp(name, pos, nameLen) == 0) {
+      pos += nameLen + 1;
+      stop = (const char *) memchr(pos, '&', (size_t)(end - pos));
+      if (stop == NULL) {
+        stop = end;
+      }
+      nameLen = stop - pos;
+      if (message->parameter == NULL) {
+        message->parameter = sdsnewlen(pos, nameLen);
+      } else {
+        message->parameter = sdscpylen(message->parameter, pos, nameLen);
+      }
+      message->parameterCursor = stop == end ? stop : stop + 1;
+      return message->parameter;
+    }
+  }
+  message->parameterCursor = NULL;
   return NULL;
 }

@@ -49,8 +49,13 @@ typedef struct inginxMessage {
   uint16_t major;
   uint16_t minor;
   sds url;
+  sds urlDecoded;
+  sds parameter;
   list *headers;
   sds body;
+  /* fields below doesn't own any resource and do not need to be freed */
+  const char *queryString;
+  const char *parameterCursor;
 } inginxMessage;
 
 typedef struct inginxClient {

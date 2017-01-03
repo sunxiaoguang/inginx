@@ -82,7 +82,11 @@ uint16_t inginxMessageStatus(const inginxMessage *message);
 inginxMethod inginxMessageMethod(const inginxMessage *message);
 const char* inginxMessageUrl(const inginxMessage *message);
 const char *inginxMessageHeader(const inginxMessage *message, const char *field);
+const char *inginxMessageHeaderNext(const inginxMessage *message, const char *field, const char *cursor);
 const char *inginxMessageBody(const inginxMessage *message);
+const char *inginxMessageUrlDecoded(const inginxMessage *message);
+const char *inginxMessageParameter(const inginxMessage *message, const char *name);
+const char *inginxMessageParameterNext(const inginxMessage *message, const char *name, const char *cursor);
 void inginxMessageVersion(const inginxMessage *message, uint16_t *major, uint16_t *minor);
 
 const char *inginxVersion(void);

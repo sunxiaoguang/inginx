@@ -13,6 +13,8 @@
 
 #include <inginx.h>
 
+static const char *tmp;
+
 void serverListener2(inginxServer *s, inginxClient *c, inginxEventType type, void *eventData, void *opaque);
 void serverListener2(inginxServer *s, inginxClient *c, inginxEventType type, void *eventData, void *opaque)
 {
@@ -24,11 +26,17 @@ void serverListener2(inginxServer *s, inginxClient *c, inginxEventType type, voi
       printf("Disconnected\n");
       break;
     case INGINX_EVENT_TYPE_REQUEST:
-      /*
       printf("url is %s\n", inginxMessageUrl(eventData));
-      printf("ua is %s\n", inginxMessageHeader(eventData, "User-Agent"));
+      printf("decoded url is %s\n", inginxMessageUrlDecoded(eventData));
+      printf("parameter p is %s\n", (tmp = inginxMessageParameterNext(eventData, "p", NULL)));
+      printf("parameter p is %s\n", (tmp = inginxMessageParameterNext(eventData, "p", tmp)));
+      printf("parameter p is %s\n", (tmp = inginxMessageParameterNext(eventData, "p", tmp)));
+      printf("parameter p is %s\n", (tmp = inginxMessageParameterNext(eventData, "p", tmp)));
+      tmp = NULL;
+      printf("ua is %s\n", (tmp = inginxMessageHeaderNext(eventData, "User-Agent", tmp)));
+      printf("ua is %s\n", (tmp = inginxMessageHeaderNext(eventData, "User-Agent", tmp)));
+      printf("ua is %s\n", (tmp = inginxMessageHeaderNext(eventData, "User-Agent", tmp)));
       printf("host is %s\n", inginxMessageHeader(eventData, "Host"));
-      */
       inginxClientSetStatus(c, 200);
       inginxClientAddDateHeader(c, "Date", 0);
       inginxClientAddHeader(c, "Content-Type", "application/json");
