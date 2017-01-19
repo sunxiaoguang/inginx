@@ -960,6 +960,11 @@ const char *inginxMessageBody(const inginxMessage *message)
   return message->body;
 }
 
+size_t inginxMessageBodyLength(const inginxMessage *message)
+{
+  return message->body != NULL ? sdslen(message->body) : 0;
+}
+
 void inginxClientAddHeaderVPrintf(inginxClient *c, const char *name, const char *fmt, va_list args)
 {
   if (strcasecmp(name, "Content-Length") == 0) {
