@@ -15,8 +15,30 @@
 
 static const char *tmp;
 
-void serverListener2(inginxServer *s, inginxClient *c, inginxEventType type, void *eventData, void *opaque);
-void serverListener2(inginxServer *s, inginxClient *c, inginxEventType type, void *eventData, void *opaque)
+static void printEvent(int32_t fd, int32_t mask)
+{
+  if (mask & INGINX_FILE_EVENT_READABLE) {
+    printf("fd %d is readable\n", fd);
+  }
+  if (mask & INGINX_FILE_EVENT_WRITABLE) {
+    printf("fd %d is writable\n", fd);
+  }
+}
+
+static void fileEventListener(inginxServer *s, int32_t fd, int32_t mask, void *opaque)
+{
+  printEvent(fd, mask);
+  inginxServerDeleteFileEvent(s, fd, mask);
+  close(fd);
+}
+
+static void connectEventListener(inginxServer *s, int32_t fd, int32_t mask, void *opaque)
+{
+  printEvent(fd, mask);
+  inginxServerCreateFileEvent(s, fd, INGINX_FILE_EVENT_READABLE | INGINX_FILE_EVENT_WRITABLE, fileEventListener, NULL);
+}
+
+static void serverListener2(inginxServer *s, inginxClient *c, inginxEventType type, void *eventData, void *opaque)
 {
   switch (type) {
     case INGINX_EVENT_TYPE_CONNECTED:
@@ -41,9 +63,10 @@ void serverListener2(inginxServer *s, inginxClient *c, inginxEventType type, voi
       inginxClientAddDateHeader(c, "Date", 0);
       inginxClientAddHeader(c, "Content-Type", "application/json");
       inginxClientAddHeader(c, "Connection", "keep-alive");
-      inginxClientAddHeaderPrintf(c, "Thread", "%u", (unsigned int) (intptr_t) pthread_self());
+      inginxClientAddHeaderPrintf(c, "Thread", "%u", (uint32_t) (intptr_t) pthread_self());
       inginxClientAddHeader(c, "Server", "ingnix 1.0");
       inginxClientAddBody(c, "abcd");
+      inginxServerCreateFileEvent(s, inginxServerConnect(s, "localhost", 8888), INGINX_FILE_EVENT_WRITABLE, connectEventListener, NULL);
       break;
     case INGINX_EVENT_TYPE_RESPONSE:
       printf("Response\n");
@@ -61,7 +84,7 @@ void serverListener2(inginxServer *s, inginxClient *c, inginxEventType type, voi
 
 static inginxServer *volatile s;
 
-static void sigShutdownHandler(int sig) {
+static void sigShutdownHandler(int32_t sig) {
   fprintf(stderr, "Shutdown server immediately\n");
   inginxServerShutdown(s);
 }
@@ -80,9 +103,7 @@ void setupSignalHandlers(void) {
   return;
 }
 
-
-
-int main(int argc, const char **argv)
+int32_t main(int32_t argc, const char **argv)
 {
   setupSignalHandlers();
   s = inginxServerRelaxed(inginxServerHz(inginxServerConnectionLimit(inginxServerBind(inginxServerListener(inginxServerLogger(inginxServerGroupCreate(3, 0),
@@ -91,4 +112,3 @@ int main(int argc, const char **argv)
   fprintf(stderr, "Returned from server loop, free it now\n");
   return 0;
 }
-

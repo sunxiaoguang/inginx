@@ -67,7 +67,7 @@ typedef struct inginxClient {
   list *reply;
   int32_t replyBytes;
   int32_t flags;
-  struct inginxServer *server;
+  inginxServer *server;
   int64_t lastInteraction;
   inginxClientState state;
   uint8_t lengthSent;

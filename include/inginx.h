@@ -106,6 +106,18 @@ inginxServer *inginxServerRelaxed(inginxServer *server);
 void inginxServerSimpleLogger(inginxServer *s, inginxLogLevel level, const char *func, const char *file, uint32_t line, const char *log, void *opaque);
 void inginxServerFree(inginxServer *inginxServer);
 
+typedef enum inginxFileEventType {
+  INGINX_FILE_EVENT_NONE = 0,
+  INGINX_FILE_EVENT_READABLE = 1,
+  INGINX_FILE_EVENT_WRITABLE = 2,
+} inginxFileEventType;
+
+typedef void (*inginxFileEventListener)(inginxServer *server, int32_t fd, int32_t mask, void *opaque);
+int32_t inginxServerCreateFileEvent(inginxServer *server, int32_t fd, int32_t mask, inginxFileEventListener listener, void *opaque);
+int32_t inginxServerDeleteFileEvent(inginxServer *server, int32_t fd, int32_t mask);
+int32_t inginxServerGetFileEvents(inginxServer *server, int32_t fd);
+int32_t inginxServerConnect(inginxServer *server, const char *addr, uint16_t port);
+
 int32_t inginxClientGetRemoteAddress(inginxClient *client, char *address, size_t size, uint16_t *port);
 int32_t inginxClientGetLocalAddress(inginxClient *client, char *address, size_t size, uint16_t *port);
 void inginxClientSetStatus(inginxClient *c, int32_t status);

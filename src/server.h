@@ -11,6 +11,14 @@
 extern "C" {
 #endif
 
+typedef struct inginxFileEvent
+{
+  int32_t mask;
+  inginxFileEventListener read;
+  inginxFileEventListener write;
+  void *opaque;
+} inginxFileEvent;
+
 typedef struct inginxServer
 {
   inginxClient *current;
@@ -36,6 +44,7 @@ typedef struct inginxServer
   inginxServer *group;
   pthread_t dispatchingThread;
   http_parser_execute parser;
+  inginxFileEvent *events;
 } inginxServer;
 
 void inginxServerClientRequest(inginxServer *inginxServer, inginxClient *client);

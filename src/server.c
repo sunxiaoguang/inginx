@@ -86,7 +86,7 @@ static void updateCachedTime(inginxServer *s) {
  * The function gets the current time in milliseconds as argument since
  * it gets called multiple times in a loop, so calling gettimeofday() for
  * each iteration would be costly without any actual gain. */
-static int clientsCronHandleTimeout(inginxServer *s, inginxClient *c, int64_t now_ms) {
+static int32_t clientsCronHandleTimeout(inginxServer *s, inginxClient *c, int64_t now_ms) {
   time_t now = now_ms / 1000;
 
   if (s->maxIdleTime && (now - c->lastInteraction > s->maxIdleTime)) {
@@ -102,8 +102,8 @@ static void clientsCron(inginxServer *s) {
    * per call. Since this function is called server.hz times per second
    * we are sure that in the worst case we process all the clients in 1
    * second. */
-  int numclients = listLength(s->clients);
-  int iterations = numclients / s->hz;
+  int32_t numclients = listLength(s->clients);
+  int32_t iterations = numclients / s->hz;
   int64_t now = mstime();
 
   /* Process at least a few clients while we are at it, even if we need
@@ -130,7 +130,7 @@ static void clientsCron(inginxServer *s) {
   }
 }
 
-static int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData)
+static int32_t serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData)
 {
   AE_NOTUSED(id);
   AE_NOTUSED(clientData);
@@ -172,7 +172,6 @@ static inline void doServerBind(inginxServer *server, char *address, int32_t por
     listAddNodeTail(server->listening, (void *) (intptr_t) fd4);
   }
 }
-
 
 inginxServer *inginxServerHz(inginxServer *server, int32_t hz)
 {
@@ -224,6 +223,7 @@ static void doServerConnectionLimit(inginxServer *server, int32_t limit)
     server->el = aeCreateEventLoop(limit);
     server->el->data = server;
   }
+  server->events = zrealloc(server->events, limit * sizeof(inginxFileEvent));
 }
 
 inginxServer *inginxServerConnectionLimit(inginxServer *s, int32_t limit)
@@ -242,7 +242,7 @@ inginxServer *inginxServerConnectionLimit(inginxServer *s, int32_t limit)
   return s;
 }
 
-static inginxClient *createClient(inginxServer *s, int fd) {
+static inginxClient *createClient(inginxServer *s, int32_t fd) {
   inginxClient *c = zcalloc(sizeof(inginxClient));
 
   /* passing -1 as fd it is possible to create a non connected client.
@@ -275,8 +275,8 @@ static inginxClient *createClient(inginxServer *s, int fd) {
   return c;
 }
 
-static void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
-  int cport, cfd, max = 16;
+static void acceptTcpHandler(aeEventLoop *el, int32_t fd, void *privdata, int32_t mask) {
+  int32_t cport, cfd, max = 16;
   char cip[256];
   inginxServer *s = privdata;
 
@@ -400,6 +400,9 @@ inline static void doServerFree(inginxServer *server)
   }
   if (server->listening) {
     listRelease(server->listening);
+  }
+  if (server->events) {
+    zfree(server->events);
   }
 }
 
@@ -552,4 +555,55 @@ inginxServer *inginxServerRelaxed(inginxServer *server)
     doInginxServerParser(server, http_parser_execute_relaxed);
   }
   return server;
+}
+
+static void inginxServerFileEvent(aeEventLoop *el, int32_t fd, void *opaque, int32_t mask)
+{
+  inginxFileEvent *event = opaque;
+  int32_t rfired = 0;
+  if ((event->mask & mask) & INGINX_FILE_EVENT_READABLE) {
+    rfired = 1;
+    event->read(el->data, fd, mask, event->opaque);
+  }
+  if ((event->mask & mask) & INGINX_FILE_EVENT_WRITABLE) {
+    if (!rfired || event->write != event->read) {
+      event->write(el->data, fd, mask, event->opaque);
+    }
+  }
+}
+
+int32_t inginxServerCreateFileEvent(inginxServer *server, int32_t fd, int32_t mask, inginxFileEventListener listener, void *opaque)
+{
+  inginxFileEvent *event = server->events + fd;
+  int32_t rc = aeCreateFileEvent(server->el, fd, mask, inginxServerFileEvent, event);
+  if (rc == AE_OK) {
+    event->mask = aeGetFileEvents(server->el, fd);
+    if (mask & INGINX_FILE_EVENT_READABLE) {
+      event->read = listener;
+    }
+    if (mask & INGINX_FILE_EVENT_WRITABLE) {
+      event->write = listener;
+    }
+  }
+  return rc;
+}
+
+int32_t inginxServerDeleteFileEvent(inginxServer *server, int32_t fd, int32_t mask)
+{
+  if (fd < 0 || aeGetSetSize(server->el) <= fd) {
+    return  0;
+  }
+  aeDeleteFileEvent(server->el, fd, mask);
+  server->events[fd].mask = aeGetFileEvents(server->el, fd);
+  return 0;
+}
+
+int32_t inginxServerGetFileEvents(inginxServer *server, int32_t fd)
+{
+  return aeGetFileEvents(server->el, fd);
+}
+
+int32_t inginxServerConnect(inginxServer *server, const char *addr, uint16_t port)
+{
+  return anetTcpNonBlockConnect(server->error, (char *) addr, port);
 }
