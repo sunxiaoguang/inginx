@@ -284,8 +284,7 @@ static void acceptTcpHandler(aeEventLoop *el, int32_t fd, void *privdata, int32_
     cfd = anetTcpAccept(s->error, fd, cip, sizeof(cip), &cport);
     if (cfd == ANET_ERR) {
       if (errno != EWOULDBLOCK) {
-        strerror_r(errno, s->error, sizeof(s->error));
-        INGINX_LOG_ERROR(el->data, "Could not accept new connection from client. %s", s->error);
+        INGINX_LOG_ERROR(el->data, "Could not accept new connection from client. %s", inginxServerErrnoString(s));
       }
       return;
     } else {
@@ -606,4 +605,14 @@ int32_t inginxServerGetFileEvents(inginxServer *server, int32_t fd)
 int32_t inginxServerConnect(inginxServer *server, const char *addr, uint16_t port)
 {
   return anetTcpNonBlockConnect(server->error, (char *) addr, port);
+}
+
+const char *inginxServerErrnoString(inginxServer *server)
+{
+#ifdef _GNU_SOURCE
+  return strerror_r(errno, server->error, sizeof(server->error));
+#else
+  strerror_r(errno, server->error, sizeof(server->error));
+  return server->error
+#endif
 }

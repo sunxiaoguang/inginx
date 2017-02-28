@@ -59,6 +59,8 @@ void inginxServerLog(inginxServer *inginxServer, inginxLogLevel level, const cha
 void inginxServerLogFlush(inginxServer *server);
 int32_t inginxServerIsDispatchingThread(inginxServer *server);
 
+const char *inginxServerErrnoString(inginxServer *server);
+
 #define INGINX_LOG_TRACE_ENABLED(SRV) ((SRV)->loggerLevel <= INGINX_LOG_LEVEL_TRACE)
 #define INGINX_LOG_DEBUG_ENABLED(SRV) ((SRV)->loggerLevel <= INGINX_LOG_LEVEL_DEBUG)
 #define INGINX_LOG_INFO_ENABLED(SRV) ((SRV)->loggerLevel <= INGINX_LOG_LEVEL_INFO)

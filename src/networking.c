@@ -233,8 +233,7 @@ static int writeToClient(aeEventLoop *el, int fd, inginxClient *c, int handler_i
     if (errno == EAGAIN) {
       nwritten = 0;
     } else {
-      strerror_r(errno, s->error, sizeof(s->error));
-      INGINX_LOG_TRACE(el->data, "Error writing to client: %s", s->error);
+      INGINX_LOG_TRACE(el->data, "Error writing to client: %s", inginxServerErrnoString(s));
       inginxClientFree(el, c);
       return C_ERR;
     }
@@ -545,8 +544,7 @@ void inginxClientReadFrom(aeEventLoop *el, int fd, void *privdata, int mask)
   inginxServer *s = el->data;
   ssize_t nread = read(c->fd, buffer, sizeof(buffer));
   if (nread < 0) {
-    strerror_r(errno, s->error, sizeof(s->error));
-    INGINX_LOG_DEBUG(s, "Could not read from fd %zd. %s", nread, s->error);
+    INGINX_LOG_DEBUG(s, "Could not read from fd %d. %s", fd, inginxServerErrnoString(s));
     inginxClientFree(el, c);
     return;
   } else if (nread == 0) {
